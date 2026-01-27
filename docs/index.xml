@@ -1,0 +1,1198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>Anant&#39;s Blog</title>
+<link>https://github.com/kaymant/blogs/</link>
+<atom:link href="https://github.com/kaymant/blogs/index.xml" rel="self" type="application/rss+xml"/>
+<description>A blog about Mathematics, Machine Learning, and EdTech.</description>
+<generator>quarto-1.8.27</generator>
+<lastBuildDate>Sun, 25 Jan 2026 18:30:00 GMT</lastBuildDate>
+<item>
+  <title>Post With Code</title>
+  <dc:creator>Harlow Malloc</dc:creator>
+  <link>https://github.com/kaymant/blogs/posts/post-with-code/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>This is a post with executable code.</p>
+
+
+
+ ]]></description>
+  <category>news</category>
+  <category>code</category>
+  <category>analysis</category>
+  <guid>https://github.com/kaymant/blogs/posts/post-with-code/</guid>
+  <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
+  <media:content url="https://github.com/kaymant/blogs/posts/post-with-code/image.jpg" medium="image" type="image/jpeg"/>
+</item>
+<item>
+  <title>76x Faster: Benchmarking Matrix Multiplication in C</title>
+  <dc:creator>Anant Kumar</dc:creator>
+  <link>https://github.com/kaymant/blogs/posts/matrix-multiplication-benchmarking/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>Matrix multiplication is the “Hello World” of High-Performance Computing. In this post, I explore how much performance we can squeeze out of a standard <img src="https://latex.codecogs.com/png.latex?C%20=%20A%20%5Ctimes%20B"> operation on a modern CPU.</p>
+<p>We tested four implementations on a square matrix of size <strong><img src="https://latex.codecogs.com/png.latex?N%20=%202048"></strong>:</p>
+<ol type="1">
+<li><strong>Naive:</strong> Standard <img src="https://latex.codecogs.com/png.latex?i,%20j,%20k"> triple loop.</li>
+<li><strong>Loop Reordered:</strong> Changing memory access patterns to be cache-friendly.</li>
+<li><strong>SIMD:</strong> Using AVX2 intrinsics for parallelism within a single core.</li>
+<li><strong>Tiled + OpenMP + SIMD:</strong> The kitchen sink approach.</li>
+</ol>
+<section id="the-benchmark-results" class="level2">
+<h2 class="anchored" data-anchor-id="the-benchmark-results">The Benchmark Results</h2>
+<p>The performance difference was massive. The final optimized version was <strong>76x faster</strong> than the naive implementation (estimated).</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Implementation</th>
+<th style="text-align: right;">Execution Time (s)</th>
+<th style="text-align: right;">Speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Naive</td>
+<td style="text-align: right;">~84.0 s</td>
+<td style="text-align: right;">1.0x</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Loop Reordered</td>
+<td style="text-align: right;">~12.5 s</td>
+<td style="text-align: right;">6.7x</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SIMD (AVX2)</td>
+<td style="text-align: right;">~3.8 s</td>
+<td style="text-align: right;">22.1x</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Tiled + OpenMP + SIMD</strong></td>
+<td style="text-align: right;"><strong>1.10 s</strong></td>
+<td style="text-align: right;"><strong>76.4x</strong></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="the-naive-approach" class="level2">
+<h2 class="anchored" data-anchor-id="the-naive-approach">1. The Naive Approach</h2>
+<p>The mathematical definition of matrix multiplication is straightforward: <img src="https://latex.codecogs.com/png.latex?C_%7Bij%7D%20=%20%5Csum_k%20A_%7Bik%7D%20B_%7Bkj%7D"></p>
+<p>In C, this translates to three nested loops.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// --- 1. Naive Implementation ---</span></span>
+<span id="cb1-2"><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">void</span> matmul_naive<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">(</span><span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">double</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>A<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">double</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>B<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">double</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>C<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">int</span> rowsA<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">int</span> colsA<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">int</span> colsB<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb1-3">    <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">int</span> i<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> j<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> k<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-4">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">(</span>i <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> i <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> rowsA<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">++</span>i<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb1-5">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">(</span>j <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> j <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> colsB<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">++</span>j<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb1-6">            <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">double</span> sum <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-7">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">(</span>k <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> k <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> colsA<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">++</span>k<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">)</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span></span>
+<span id="cb1-8">                sum <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+=</span> A<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">[</span>i <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> colsA <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> k<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">]</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> B<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">[</span>k <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> colsB <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> j<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">];</span></span>
+<span id="cb1-9">            <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb1-10">            C<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">[</span>i <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> colsB <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> j<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">]</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> sum<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-11">        <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb1-12">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span>
+<span id="cb1-13"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span></span></code></pre></div></div>
+<p><strong>The Problem:</strong> This approach suffers from poor <strong>cache locality</strong>. As we iterate through <img src="https://latex.codecogs.com/png.latex?B_%7Bkj%7D"> (inner loop on <code>k</code>), we are jumping across memory rows. Since C stores arrays in row-major order, this leads to frequent cache misses.</p>
+
+
+</section>
+
+ ]]></description>
+  <category>C</category>
+  <category>HPC</category>
+  <category>Linear Algebra</category>
+  <category>Optimization</category>
+  <guid>https://github.com/kaymant/blogs/posts/matrix-multiplication-benchmarking/</guid>
+  <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
+</item>
+<item>
+  <title>Visualizing Functions with Contour Plots</title>
+  <dc:creator>Anant Kumar</dc:creator>
+  <link>https://github.com/kaymant/blogs/posts/contour-plots/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>Visualizing functions of two variables can provide deep insights into their behavior. In this post, we will explore how to create 3D surface plots and contour plots using Python’s Matplotlib library. We will use the function <img src="https://latex.codecogs.com/png.latex?z%20=%20%20x%5E2%20+%20y%5E2"> as our example.</p>
+<div id="cell-1" class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> numpy <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> np</span>
+<span id="cb1-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> matplotlib.pyplot <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> plt</span></code></pre></div></div>
+</details>
+</div>
+<p>Conisder a two dimensional function <img src="https://latex.codecogs.com/png.latex?f(x,y)">. To visualize the function, its graph can be plotted as follows: For each point <img src="https://latex.codecogs.com/png.latex?(x,y)"> on the <img src="https://latex.codecogs.com/png.latex?xy">-plane, evaluate the value of <img src="https://latex.codecogs.com/png.latex?f"> and assign that value to a variable <img src="https://latex.codecogs.com/png.latex?z">, so that <img src="https://latex.codecogs.com/png.latex?z=f(x,y)">. In the 3D space, the graph <img src="https://latex.codecogs.com/png.latex?z=f(x,y)"> gives a surface. For example, consider the function <img src="https://latex.codecogs.com/png.latex?f(x,y)%20=%20x%5E2+y%5E2">. Let’s plot the surface <img src="https://latex.codecogs.com/png.latex?%0Az=x%5E2+y%5E2%0A"></p>
+<div id="cell-3" class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> f(x,y):</span>
+<span id="cb2-2">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> x<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span>y<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span></span></code></pre></div></div>
+</details>
+</div>
+<div id="cell-4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="5b3dfe42-563f-4e8d-e9be-77d11a85fd1f">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> mpl_toolkits.mplot3d <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> Axes3D</span>
+<span id="cb3-2"></span>
+<span id="cb3-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create gridpoints</span></span>
+<span id="cb3-4">x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb3-5">y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb3-6">X,Y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.meshgrid(x,y)</span>
+<span id="cb3-7"></span>
+<span id="cb3-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create figure</span></span>
+<span id="cb3-9">fig <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.figure(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>))</span>
+<span id="cb3-10">ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> fig.add_subplot(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">111</span>, projection<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3d'</span>)</span>
+<span id="cb3-11"></span>
+<span id="cb3-12"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the surface</span></span>
+<span id="cb3-13">ax.plot_surface(X, Y, f(X, Y), cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'viridis'</span>)</span>
+<span id="cb3-14"></span>
+<span id="cb3-15"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set labels</span></span>
+<span id="cb3-16">ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'x axis'</span>)</span>
+<span id="cb3-17">ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'y axis'</span>)</span>
+<span id="cb3-18">ax.set_zlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'z axis'</span>)</span>
+<span id="cb3-19">ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3D plot of z = x^2 + y^2'</span>)</span>
+<span id="cb3-20"></span>
+<span id="cb3-21"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Show the plot</span></span>
+<span id="cb3-22">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-4-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>A <strong>level curve</strong> of the function <img src="https://latex.codecogs.com/png.latex?f(x,y)"> is a curve showing the set of points where the function has a constant value.</p>
+<p>In the above example, suppose we need the level curve where <img src="https://latex.codecogs.com/png.latex?f(x,y)%20=10">. This will be obtained as the intersection of the surface <img src="https://latex.codecogs.com/png.latex?z=x%5E2%20+%20y%5E2"> with the plane <img src="https://latex.codecogs.com/png.latex?z=10">.</p>
+<div id="cell-6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="985524fc-f380-46dd-812b-fd42544321b8">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1">Z<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> f(X,Y)</span>
+<span id="cb4-2"></span>
+<span id="cb4-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create a figure and a 3D axis</span></span>
+<span id="cb4-4">fig <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.figure(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>))</span>
+<span id="cb4-5"></span>
+<span id="cb4-6"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 3D plot for the surface</span></span>
+<span id="cb4-7">ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> fig.add_subplot(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">111</span>, projection<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3d'</span>)</span>
+<span id="cb4-8"></span>
+<span id="cb4-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the surface slightly translucent</span></span>
+<span id="cb4-10">ax.plot_surface(X, Y, Z, cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'viridis'</span>, alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.7</span>)</span>
+<span id="cb4-11"></span>
+<span id="cb4-12"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the contour (level curve) for z = 10 on the surface</span></span>
+<span id="cb4-13">ax.contour(X, Y,Z, levels<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>], colors<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'r'</span>, linewidths<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb4-14"></span>
+<span id="cb4-15"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set labels for 3D plot</span></span>
+<span id="cb4-16">ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'x axis'</span>)</span>
+<span id="cb4-17">ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'y axis'</span>)</span>
+<span id="cb4-18">ax.set_zlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'z axis'</span>)</span>
+<span id="cb4-19">ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3D plot of z = x^2 + y^2'</span>)</span>
+<span id="cb4-20"></span>
+<span id="cb4-21"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Show the plots</span></span>
+<span id="cb4-22">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-5-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>If the level curves are drawn at regular intervals of the <img src="https://latex.codecogs.com/png.latex?z"> coordinates, we shall obtain many such circles whose centers are located on the <img src="https://latex.codecogs.com/png.latex?z"> axis and are equal spaced along it.</p>
+<div id="cell-8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="145da410-7182-45a2-d94e-094c31fbcd36">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create a figure and a 3D axis</span></span>
+<span id="cb5-2">fig <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.figure(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>))</span>
+<span id="cb5-3"></span>
+<span id="cb5-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 3D plot for the surface</span></span>
+<span id="cb5-5">ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> fig.add_subplot(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">111</span>, projection<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3d'</span>)</span>
+<span id="cb5-6"></span>
+<span id="cb5-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the surface slightly translucent</span></span>
+<span id="cb5-8">ax.plot_surface(X, Y, Z, cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'viridis'</span>, alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.7</span>)</span>
+<span id="cb5-9"></span>
+<span id="cb5-10"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the contour (level curve) for z = 10 on the surface</span></span>
+<span id="cb5-11">ax.contour(X, Y,Z, levels<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>k <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> k <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)], colors<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'r'</span>, linewidths<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb5-12"></span>
+<span id="cb5-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set labels for 3D plot</span></span>
+<span id="cb5-14">ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'x axis'</span>)</span>
+<span id="cb5-15">ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'y axis'</span>)</span>
+<span id="cb5-16">ax.set_zlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'z axis'</span>)</span>
+<span id="cb5-17">ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3D plot of z = x^2 + y^2'</span>)</span>
+<span id="cb5-18"></span>
+<span id="cb5-19"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Show the plots</span></span>
+<span id="cb5-20">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>If these level curves are projected back on the <img src="https://latex.codecogs.com/png.latex?xy"> plane, we get the contour plots. In our case, they will be circels. However, as the surface on which the level curves are present is curved, the contours projected on the <img src="https://latex.codecogs.com/png.latex?xy"> plane will not be equally spaced.</p>
+<div id="cell-10" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="7bf1c205-f474-4a5d-b263-cc8120edd693">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create a figure and a 3D axis</span></span>
+<span id="cb6-2">fig <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.figure(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>))</span>
+<span id="cb6-3"></span>
+<span id="cb6-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 3D plot for the surface</span></span>
+<span id="cb6-5">ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> fig.add_subplot(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">111</span>, projection<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3d'</span>)</span>
+<span id="cb6-6"></span>
+<span id="cb6-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the surface slightly translucent</span></span>
+<span id="cb6-8">ax.plot_surface(X, Y, Z, cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'viridis'</span>, alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.7</span>)</span>
+<span id="cb6-9"></span>
+<span id="cb6-10"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the contour (level curve) for various values of z on the surface</span></span>
+<span id="cb6-11">ax.contour(X, Y,Z, levels<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>k <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> k <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)], colors<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'r'</span>, linewidths<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb6-12"></span>
+<span id="cb6-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Project the contours  onto the xy-plane at z=0</span></span>
+<span id="cb6-14">ax.contour(X, Y, Z, levels<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>k <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> k <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)], linewidths<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, offset<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span>
+<span id="cb6-15"></span>
+<span id="cb6-16"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set labels for 3D plot</span></span>
+<span id="cb6-17">ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'x axis'</span>)</span>
+<span id="cb6-18">ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'y axis'</span>)</span>
+<span id="cb6-19">ax.set_zlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'z axis'</span>)</span>
+<span id="cb6-20">ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'3D plot of z = x^2 + y^2'</span>)</span>
+<span id="cb6-21"></span>
+<span id="cb6-22"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Show the plots</span></span>
+<span id="cb6-23">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>If you just see these contours on the <img src="https://latex.codecogs.com/png.latex?xy"> plane, they still give an idea as to how the function behaves.</p>
+<div id="cell-12" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:872}}" data-outputid="2ec22212-c940-43d3-b3a7-7c9bc42b6100">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1">fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>))</span>
+<span id="cb7-2">CS <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ax.contour(X, Y, Z, levels<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>k <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> k <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)])</span>
+<span id="cb7-3">ax.clabel(CS, inline<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>, fontsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)</span>
+<span id="cb7-4">ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'x axis'</span>)</span>
+<span id="cb7-5">ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'y axis'</span>)</span>
+<span id="cb7-6">ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Contour plots of z = x^2+y^2'</span>)</span>
+<span id="cb7-7">ax.set_aspect(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'equal'</span>)</span>
+<span id="cb7-8">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="contour-plots-for-sum-of-squared-errors-in-linear-regression" class="level1">
+<h1>Contour plots for Sum of Squared Errors in Linear Regression</h1>
+<hr>
+<p>For ease of visualization, let’s consider a 2D dataset which has <img src="https://latex.codecogs.com/png.latex?n"> datapoints each having two features, say <img src="https://latex.codecogs.com/png.latex?x_1">, <img src="https://latex.codecogs.com/png.latex?x_2">. The numerical values of these features for the <img src="https://latex.codecogs.com/png.latex?i">-th vector <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7Bx%7D_i"> are denoted as <img src="https://latex.codecogs.com/png.latex?x_%7B1i%7D"> and <img src="https://latex.codecogs.com/png.latex?x_%7B2i%7D">. The label for <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7Bx%7D_i"> is <img src="https://latex.codecogs.com/png.latex?y_i">. The linear regression model is <img src="https://latex.codecogs.com/png.latex?%0Af(%5Cmathbf%7Bw%7D,%20%5Cmathbf%7Bx%7D)%20=%20%5Cmathbf%7Bw%7D%5ET%20%5Cmathbf%7Bx%7D%20=%20w_1%20x_1%20+%20w_2%20x_2%0A"> where <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7Bw%7D%20=%20%5Cbegin%7Bbmatrix%7D%20w_1%20%5C%5C%20w_2%20%5Cend%7Bbmatrix%7D"> is the weight vector which needs to be chosen so that the <strong>sum of the squared errors</strong> (SSE) is minimized. The error for the <img src="https://latex.codecogs.com/png.latex?i">-th datapoint is <img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbf%7Bw%7D%5ET%20%5Cmathbf%7Bx%7D_i%20%20-%20y_i%20=%20w_1%20x_%7B1i%7D%20+%20w_2%20x_%7B2i%7D%20%20-%20y_i%0A"> (I have removed the intercept term as it will make the loss function a three variable function which will be difficult to visualize).</p>
+<p>As such the SSE is <img src="https://latex.codecogs.com/png.latex?%0AL(w_1,%20w_2)%20=%20%5Csum_%7Bi=1%7D%5En%20(w_1x_%7B1i%7D%20+%20w_2%20x_%7B2i%7D-y_i)%5E2%0A"> Using the expansion formula <img src="https://latex.codecogs.com/png.latex?%0A(a+b+c)%5E2%20=%20a%5E2%20+b%5E2%20+c%5E2%20+%202ab%20+2bc%20+%202ca%0A"> we get <img src="https://latex.codecogs.com/png.latex?%0AL(w_1,%20w_2)%20=%20%5Csum_%7Bi=1%7D%5En%20(w_1%5E2%20x_%7B1i%7D%5E2%20%20+%20w_2%5E2%20%20x_%7B2i%7D%5E2%20+%20y_i%5E2%20+%202w_1%20w_2%20x_%7B1i%7D%20x_%7B2i%7D%20%20-%202%20w_1%20x_%7B1i%7D%20y_i%20-%202%20w_2%20x_%7B2i%7D%20y_i)%0A"> As <img src="https://latex.codecogs.com/png.latex?w_1">, <img src="https://latex.codecogs.com/png.latex?w_2"> do not depend on the index <img src="https://latex.codecogs.com/png.latex?i">, the loss function becomes <img src="https://latex.codecogs.com/png.latex?%0AL(w_1,%20w_2)%20=%20w_1%5E2%20%5Csum_%7Bi=1%7D%5En%20x_%7B1i%7D%5E2%20%20+%20w_2%5E2%20%5Csum_%7Bi=1%7D%5En%20x_%7B2i%7D%5E2%20%20+%20%5Csum_%7Bi=1%7D%5En%20y_i%5E2%20+%202w_1%20w_2%20%5Csum_%7Bi=1%7D%5En%20x_%7B1i%7D%20x_%7B2i%7D%20%20-%202%20w_1%20%5Csum_%7Bi=1%7D%5En%20x_%7B1i%7D%20y_i%20-%202%20w_2%20%5Csum_%7Bi=1%7D%5En%20x_%7B2i%7D%20y_i%0A"> Notice that each of the sums above are constants depending on the dataset. As the SSE is a quadratic function in <img src="https://latex.codecogs.com/png.latex?w_1">, <img src="https://latex.codecogs.com/png.latex?w_2"> of the form <img src="https://latex.codecogs.com/png.latex?%0AL(w_1,%20w_2)%20=%20a%20w_1%5E2%20+%20b%20w_2%5E2%20+%202h%20w_1%20w_2%20+%202g%20w_1%20+%202f%20w_2%20+%20c%20%5C%5C%0A"> where $a = <em>{i=1}^n x</em>{1i}^2 $, <img src="https://latex.codecogs.com/png.latex?b%20=%20%5Csum_%7Bi=1%7D%5En%20x_%7B2i%7D%5E2">, $h = <em>{i=1}^n x</em>{1i} x_{2i} $, $ g = - <em>{i=1}^n x</em>{1i}y_i$, $ f = - <em>{i=1}^n x</em>{2i}y_i$ and <img src="https://latex.codecogs.com/png.latex?c%20=%20%5Csum_%7Bi=1%7D%5En%20y_i%5E2">.</p>
+<p>The contour plots are equations of the form <img src="https://latex.codecogs.com/png.latex?%0Aa%20w_1%5E2%20+%20b%20w_2%5E2%20+%202h%20w_1%20w_2%20+%202g%20w_1%20+%202f%20w_2%20+%20c%20=%20z%0A"> for some real constant <img src="https://latex.codecogs.com/png.latex?z">. These equations, in general, represent <strong>conic sections</strong>. In fact, because of Cauchy-Schwarz inequality, <img src="https://latex.codecogs.com/png.latex?h%5E2%20-ab%20%5Cle%200">, hence the conic section is an ellipse (if <img src="https://latex.codecogs.com/png.latex?h%5E2%20-ab%20%3C0">) or a parabola (if <img src="https://latex.codecogs.com/png.latex?h%5E2=ab">).</p>
+<p>Let us try to visualize SSE contours with a toy dataset.</p>
+<div id="cell-16" class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Example dataset</span></span>
+<span id="cb8-2">X_train <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.random.rand(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)   <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 100 points between 0 and 1 for two features</span></span>
+<span id="cb8-3">y_train <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> np.random.randn(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Linear relation with noise</span></span></code></pre></div></div>
+</details>
+</div>
+<div id="cell-17" class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1">a <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb9-2">b <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb9-3">h <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>])</span>
+<span id="cb9-4">g <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> y_train)</span>
+<span id="cb9-5">f <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(X_train[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> y_train)</span>
+<span id="cb9-6">c <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(y_train <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span></code></pre></div></div>
+</details>
+</div>
+<div id="cell-18" class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> find_center(a,b,h,g,f,c):</span>
+<span id="cb10-2">  xc <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (f<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>h <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> b<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>g)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span>(a<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>b <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> h<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>h)</span>
+<span id="cb10-3">  yc <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (g<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>h <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> a<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>f)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span>(a<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>b <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> h<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>h)</span>
+<span id="cb10-4">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> np.array([xc,yc])</span></code></pre></div></div>
+</details>
+</div>
+<div id="cell-19" class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> SSE(w1, w2):</span>
+<span id="cb11-2">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> a<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> w1<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> b<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> w2<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>h<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>w1<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>w2 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>g<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>w1 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>f<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>w2 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> c</span></code></pre></div></div>
+</details>
+</div>
+<div id="cell-20" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:872}}" data-outputid="430afe2e-b9f7-4b8b-aec0-a1764d9a4138">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create gridpoints centered about (xc, yc)</span></span>
+<span id="cb12-2"></span>
+<span id="cb12-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> a<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>b <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> h<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>h <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>:</span>
+<span id="cb12-4">  xc, yc <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> find_center(a,b,h,g,f,c)</span>
+<span id="cb12-5">  x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(xc<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,xc<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb12-6">  y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(yc<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,yc<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb12-7">  x,y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.meshgrid(x,y)</span>
+<span id="cb12-8"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">else</span>:</span>
+<span id="cb12-9">  x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb12-10">  y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb12-11">  x,y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.meshgrid(x,y)</span>
+<span id="cb12-12"></span>
+<span id="cb12-13"></span>
+<span id="cb12-14">z <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> SSE(x,y)</span>
+<span id="cb12-15"></span>
+<span id="cb12-16">fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>,<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>))</span>
+<span id="cb12-17">contours <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ax.contour(x, y, z)</span>
+<span id="cb12-18">ax.clabel(contours, inline<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>, fontsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)</span>
+<span id="cb12-19">ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'w1 axis'</span>)</span>
+<span id="cb12-20">ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'w2 axis'</span>)</span>
+<span id="cb12-21">ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Contour plots of SSE'</span>)</span>
+<span id="cb12-22">ax.set_aspect(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'equal'</span>)</span>
+<span id="cb12-23">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-13-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+
+
+</section>
+
+ ]]></description>
+  <category>Mathematics</category>
+  <category>Python</category>
+  <category>Visualization</category>
+  <guid>https://github.com/kaymant/blogs/posts/contour-plots/</guid>
+  <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
+</item>
+<item>
+  <title>Welcome To My Blog</title>
+  <dc:creator>Tristan O&#39;Malley</dc:creator>
+  <link>https://github.com/kaymant/blogs/posts/welcome/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>This is the first post in a Quarto blog. Welcome!</p>
+<p><img src="https://github.com/kaymant/blogs/posts/welcome/thumbnail.jpg" class="img-fluid"></p>
+<p>Since this post doesn’t specify an explicit <code>image</code>, the first image in the post will be used in the listing page of posts.</p>
+
+
+
+ ]]></description>
+  <category>news</category>
+  <guid>https://github.com/kaymant/blogs/posts/welcome/</guid>
+  <pubDate>Thu, 22 Jan 2026 18:30:00 GMT</pubDate>
+</item>
+</channel>
+</rss>

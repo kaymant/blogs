@@ -1,0 +1,7 @@
+/.quarto/
+/_site/        # Ignore the default build folder just in case
+
+__pycache__/   # Since you are doing Python/ML
+.ipynb_checkpoints/
+
+**/*.quarto_ipynb

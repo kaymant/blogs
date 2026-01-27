@@ -1,0 +1,11 @@
+[
+  {
+    "listing": "/index.html",
+    "items": [
+      "/posts/post-with-code/index.html",
+      "/posts/matrix-multiplication-benchmarking/index.html",
+      "/posts/contour-plots/index.html",
+      "/posts/welcome/index.html"
+    ]
+  }
+]

@@ -1,0 +1,50 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Anant's Blog" # Changed from "blogs" to be more descriptive
+  description: "A blog about Mathematics, Machine Learning, and EdTech."
+  page-navigation: true
+  
+  # CRITICAL: Change this to your actual GitHub Pages URL 
+  # (e.g., https://kaymant.github.io/repo-name)
+  site-url: https://github.com/kaymant/blogs 
+  
+  navbar:
+    right:
+      - text: "About"
+        href: about.qmd
+      - icon: github
+        href: https://github.com/kaymant
+      - icon: linkedin
+        href: https://www.linkedin.com/in/an-ant/
+      - icon: youtube
+        href: https://www.youtube.com/@AnantKumarPlus
+ 
+  sidebar:
+    contents:
+      - section: "Recent Posts"
+        contents: posts/
+        sort: "date desc"
+       
+  page-footer:
+    left: "Copyright 2026, Anant"
+    right:
+      - text: "All posts"
+        href: index.qmd
+ 
+
+# OPTIMIZATION FOR ML/MATH
+# This saves the results of your code. Quarto won't re-run your 
+# ML training cells unless you modify that specific file.
+execute:
+  freeze: auto
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    # I removed "- brand" unless you have a specific custom theme file.
+    # If "brand" is not a standard theme or a file you created, it will cause an error.
+    toc: true

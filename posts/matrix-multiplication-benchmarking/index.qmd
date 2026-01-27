@@ -1,0 +1,55 @@
+---
+title: "76x Faster: Benchmarking Matrix Multiplication in C"
+description: "Optimizing Matrix Multiplication from naive loops to Tiled AVX2 + OpenMP."
+author: "Anant Kumar"
+date: "2026-01-26"
+categories: [C, HPC, Linear Algebra, Optimization]
+format:
+  html:
+    code-fold: true
+    toc: true
+---
+
+Matrix multiplication is the "Hello World" of High-Performance Computing. In this post, I explore how much performance we can squeeze out of a standard $C = A \times B$ operation on a modern CPU.
+
+We tested four implementations on a square matrix of size **$N = 2048$**:
+
+1.  **Naive:** Standard $i, j, k$ triple loop.
+2.  **Loop Reordered:** Changing memory access patterns to be cache-friendly.
+3.  **SIMD:** Using AVX2 intrinsics for parallelism within a single core.
+4.  **Tiled + OpenMP + SIMD:** The kitchen sink approach.
+
+## The Benchmark Results
+
+The performance difference was massive. The final optimized version was **76x faster** than the naive implementation (estimated).
+
+| Implementation | Execution Time (s) | Speedup |
+|:---|---:|---:|
+| Naive | ~84.0 s | 1.0x |
+| Loop Reordered | ~12.5 s | 6.7x |
+| SIMD (AVX2) | ~3.8 s | 22.1x |
+| **Tiled + OpenMP + SIMD** | **1.10 s** | **76.4x** |
+
+## 1. The Naive Approach
+The mathematical definition of matrix multiplication is straightforward:
+$$C_{ij} = \sum_k A_{ik} B_{kj}$$
+
+In C, this translates to three nested loops.
+
+```c
+// --- 1. Naive Implementation ---
+void matmul_naive(double *A, double *B, double *C, int rowsA, int colsA, int colsB) {
+    int i, j, k;
+    for (i = 0; i < rowsA; ++i) {
+        for (j = 0; j < colsB; ++j) {
+            double sum = 0;
+            for (k = 0; k < colsA; ++k) {
+                sum += A[i * colsA + k] * B[k * colsB + j];
+            }
+            C[i * colsB + j] = sum;
+        }
+    }
+}
+```
+
+**The Problem:** This approach suffers from poor **cache locality**. As we iterate through $B_{kj}$ (inner loop on `k`), we are jumping across memory rows. Since C stores arrays in row-major order, this leads to frequent cache misses.
