@@ -1,20 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://your-website-url.example.com/about.html</loc>
+    <loc>https://github.com/kaymant/blogs/about.html</loc>
     <lastmod>2026-01-26T12:12:03.121Z</lastmod>
   </url>
   <url>
-    <loc>https://your-website-url.example.com/posts/post-with-code/index.html</loc>
+    <loc>https://github.com/kaymant/blogs/posts/contour-plots/index.html</loc>
+    <lastmod>2026-01-27T09:58:44.281Z</lastmod>
+  </url>
+  <url>
+    <loc>https://github.com/kaymant/blogs/posts/post-with-code/index.html</loc>
     <lastmod>2026-01-26T12:12:03.121Z</lastmod>
-  </url>
-  <url>
-    <loc>https://your-website-url.example.com/index.html</loc>
-    <lastmod>2026-01-26T12:12:03.113Z</lastmod>
-  </url>
-  <url>
-    <loc>https://your-website-url.example.com/posts/welcome/index.html</loc>
-    <lastmod>2026-01-26T12:12:03.114Z</lastmod>
   </url>
   <url>
     <loc>https://github.com/kaymant/blogs/index.html</loc>
@@ -27,9 +23,5 @@
   <url>
     <loc>https://github.com/kaymant/blogs/posts/welcome/index.html</loc>
     <lastmod>2026-01-26T12:12:03.114Z</lastmod>
-  </url>
-  <url>
-    <loc>https://github.com/kaymant/blogs/posts/contour-plots/index.html</loc>
-    <lastmod>2026-01-27T09:58:44.281Z</lastmod>
   </url>
 </urlset>
