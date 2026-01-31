@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: docs
+  resources: 
+    - CNAME
 
 website:
   title: "Anant's Blog" # Changed from "blogs" to be more descriptive
@@ -9,7 +11,7 @@ website:
   
   # CRITICAL: Change this to your actual GitHub Pages URL 
   # (e.g., https://kaymant.github.io/repo-name)
-  site-url: https://github.com/kaymant/blogs 
+  site-url: https://anantkumar.online
   
   navbar:
     right:

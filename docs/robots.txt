@@ -1,1 +1,1 @@
-Sitemap: https://github.com/kaymant/blogs/sitemap.xml
+Sitemap: https://anantkumar.online/sitemap.xml

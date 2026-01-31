@@ -6,15 +6,15 @@
       version="2.0">
 <channel>
 <title>Anant&#39;s Blog</title>
-<link>https://github.com/kaymant/blogs/</link>
-<atom:link href="https://github.com/kaymant/blogs/index.xml" rel="self" type="application/rss+xml"/>
+<link>https://anantkumar.online/</link>
+<atom:link href="https://anantkumar.online/index.xml" rel="self" type="application/rss+xml"/>
 <description>A blog about Mathematics, Machine Learning, and EdTech.</description>
 <generator>quarto-1.8.27</generator>
 <lastBuildDate>Sun, 25 Jan 2026 18:30:00 GMT</lastBuildDate>
 <item>
   <title>Post With Code</title>
   <dc:creator>Harlow Malloc</dc:creator>
-  <link>https://github.com/kaymant/blogs/posts/post-with-code/</link>
+  <link>https://anantkumar.online/posts/post-with-code/</link>
   <description><![CDATA[ 
 
 
@@ -29,14 +29,14 @@
   <category>news</category>
   <category>code</category>
   <category>analysis</category>
-  <guid>https://github.com/kaymant/blogs/posts/post-with-code/</guid>
+  <guid>https://anantkumar.online/posts/post-with-code/</guid>
   <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
-  <media:content url="https://github.com/kaymant/blogs/posts/post-with-code/image.jpg" medium="image" type="image/jpeg"/>
+  <media:content url="https://anantkumar.online/posts/post-with-code/image.jpg" medium="image" type="image/jpeg"/>
 </item>
 <item>
   <title>76x Faster: Benchmarking Matrix Multiplication in C</title>
   <dc:creator>Anant Kumar</dc:creator>
-  <link>https://github.com/kaymant/blogs/posts/matrix-multiplication-benchmarking/</link>
+  <link>https://anantkumar.online/posts/matrix-multiplication-benchmarking/</link>
   <description><![CDATA[ 
 
 
@@ -270,13 +270,13 @@ font-style: inherit;">}</span></span></code></pre></div></div>
   <category>HPC</category>
   <category>Linear Algebra</category>
   <category>Optimization</category>
-  <guid>https://github.com/kaymant/blogs/posts/matrix-multiplication-benchmarking/</guid>
+  <guid>https://anantkumar.online/posts/matrix-multiplication-benchmarking/</guid>
   <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
 </item>
 <item>
   <title>Visualizing Functions with Contour Plots</title>
   <dc:creator>Anant Kumar</dc:creator>
-  <link>https://github.com/kaymant/blogs/posts/contour-plots/</link>
+  <link>https://anantkumar.online/posts/contour-plots/</link>
   <description><![CDATA[ 
 
 
@@ -416,7 +416,7 @@ font-style: inherit;"># Show the plot</span></span>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-4-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="https://anantkumar.online/posts/contour-plots/index_files/figure-html/cell-4-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -510,7 +510,7 @@ font-style: inherit;"># Show the plots</span></span>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-5-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="https://anantkumar.online/posts/contour-plots/index_files/figure-html/cell-5-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -613,7 +613,7 @@ font-style: inherit;"># Show the plots</span></span>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="https://anantkumar.online/posts/contour-plots/index_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -747,7 +747,7 @@ font-style: inherit;"># Show the plots</span></span>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="https://anantkumar.online/posts/contour-plots/index_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -812,7 +812,7 @@ font-style: inherit;">'equal'</span>)</span>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="https://anantkumar.online/posts/contour-plots/index_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -1157,7 +1157,7 @@ font-style: inherit;">'equal'</span>)</span>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="https://github.com/kaymant/blogs/posts/contour-plots/index_files/figure-html/cell-13-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="https://anantkumar.online/posts/contour-plots/index_files/figure-html/cell-13-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -1170,13 +1170,13 @@ font-style: inherit;">'equal'</span>)</span>
   <category>Mathematics</category>
   <category>Python</category>
   <category>Visualization</category>
-  <guid>https://github.com/kaymant/blogs/posts/contour-plots/</guid>
+  <guid>https://anantkumar.online/posts/contour-plots/</guid>
   <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
 </item>
 <item>
   <title>Welcome To My Blog</title>
   <dc:creator>Tristan O&#39;Malley</dc:creator>
-  <link>https://github.com/kaymant/blogs/posts/welcome/</link>
+  <link>https://anantkumar.online/posts/welcome/</link>
   <description><![CDATA[ 
 
 
@@ -1184,14 +1184,14 @@ font-style: inherit;">'equal'</span>)</span>
 
 
 <p>This is the first post in a Quarto blog. Welcome!</p>
-<p><img src="https://github.com/kaymant/blogs/posts/welcome/thumbnail.jpg" class="img-fluid"></p>
+<p><img src="https://anantkumar.online/posts/welcome/thumbnail.jpg" class="img-fluid"></p>
 <p>Since this post doesn’t specify an explicit <code>image</code>, the first image in the post will be used in the listing page of posts.</p>
 
 
 
  ]]></description>
   <category>news</category>
-  <guid>https://github.com/kaymant/blogs/posts/welcome/</guid>
+  <guid>https://anantkumar.online/posts/welcome/</guid>
   <pubDate>Thu, 22 Jan 2026 18:30:00 GMT</pubDate>
 </item>
 </channel>
