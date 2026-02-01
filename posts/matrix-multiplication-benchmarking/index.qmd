@@ -10,9 +10,9 @@ format:
     toc: true
 ---
 
-Matrix multiplication is the "Hello World" of High-Performance Computing. In this post, I explore how much performance we can squeeze out of a standard $C = A \times B$ operation on a modern CPU.
+In order to understand the transformer architecture, I endeavoured to build it from scratch using C. Pretty soon, I understood that unless I get an efficient method to multiply matrices, the implementation won't be efficient. Matrix multiplication is the "Hello World" of high-performance computing. In this post, I explore how much performance we can squeeze out of a standard matrix multiplication, $C = A B$ (where $A$, $B$, $C$ are matrices of suitable dimensions), operation on just a CPU.
 
-We tested four implementations on a square matrix of size **$N = 2048$**:
+I tested four implementations on a square matrix of size **$N = 2048$**:
 
 1.  **Naive:** Standard $i, j, k$ triple loop.
 2.  **Loop Reordered:** Changing memory access patterns to be cache-friendly.

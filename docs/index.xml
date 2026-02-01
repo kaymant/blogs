@@ -12,28 +12,6 @@
 <generator>quarto-1.8.27</generator>
 <lastBuildDate>Sun, 25 Jan 2026 18:30:00 GMT</lastBuildDate>
 <item>
-  <title>Post With Code</title>
-  <dc:creator>Harlow Malloc</dc:creator>
-  <link>https://anantkumar.online/posts/post-with-code/</link>
-  <description><![CDATA[ 
-
-
-
-
-
-<p>This is a post with executable code.</p>
-
-
-
- ]]></description>
-  <category>news</category>
-  <category>code</category>
-  <category>analysis</category>
-  <guid>https://anantkumar.online/posts/post-with-code/</guid>
-  <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
-  <media:content url="https://anantkumar.online/posts/post-with-code/image.jpg" medium="image" type="image/jpeg"/>
-</item>
-<item>
   <title>76x Faster: Benchmarking Matrix Multiplication in C</title>
   <dc:creator>Anant Kumar</dc:creator>
   <link>https://anantkumar.online/posts/matrix-multiplication-benchmarking/</link>
@@ -43,8 +21,8 @@
 
 
 
-<p>Matrix multiplication is the “Hello World” of High-Performance Computing. In this post, I explore how much performance we can squeeze out of a standard <img src="https://latex.codecogs.com/png.latex?C%20=%20A%20%5Ctimes%20B"> operation on a modern CPU.</p>
-<p>We tested four implementations on a square matrix of size <strong><img src="https://latex.codecogs.com/png.latex?N%20=%202048"></strong>:</p>
+<p>In order to understand the transformer architecture, I endeavoured to build it from scratch using C. Pretty soon, I understood that unless I get an efficient method to multiply matrices, the implementation won’t be efficient. Matrix multiplication is the “Hello World” of high-performance computing. In this post, I explore how much performance we can squeeze out of a standard matrix multiplication, <img src="https://latex.codecogs.com/png.latex?C%20=%20A%20B"> (where <img src="https://latex.codecogs.com/png.latex?A">, <img src="https://latex.codecogs.com/png.latex?B">, <img src="https://latex.codecogs.com/png.latex?C"> are matrices of suitable dimensions), operation on just a CPU.</p>
+<p>I tested four implementations on a square matrix of size <strong><img src="https://latex.codecogs.com/png.latex?N%20=%202048"></strong>:</p>
 <ol type="1">
 <li><strong>Naive:</strong> Standard <img src="https://latex.codecogs.com/png.latex?i,%20j,%20k"> triple loop.</li>
 <li><strong>Loop Reordered:</strong> Changing memory access patterns to be cache-friendly.</li>
@@ -1172,27 +1150,6 @@ font-style: inherit;">'equal'</span>)</span>
   <category>Visualization</category>
   <guid>https://anantkumar.online/posts/contour-plots/</guid>
   <pubDate>Sun, 25 Jan 2026 18:30:00 GMT</pubDate>
-</item>
-<item>
-  <title>Welcome To My Blog</title>
-  <dc:creator>Tristan O&#39;Malley</dc:creator>
-  <link>https://anantkumar.online/posts/welcome/</link>
-  <description><![CDATA[ 
-
-
-
-
-
-<p>This is the first post in a Quarto blog. Welcome!</p>
-<p><img src="https://anantkumar.online/posts/welcome/thumbnail.jpg" class="img-fluid"></p>
-<p>Since this post doesn’t specify an explicit <code>image</code>, the first image in the post will be used in the listing page of posts.</p>
-
-
-
- ]]></description>
-  <category>news</category>
-  <guid>https://anantkumar.online/posts/welcome/</guid>
-  <pubDate>Thu, 22 Jan 2026 18:30:00 GMT</pubDate>
 </item>
 </channel>
 </rss>
