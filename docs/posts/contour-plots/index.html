@@ -471,8 +471,8 @@ z=x^2+y^2
 </div>
 </div>
 </div>
-<section id="contour-plots-for-sum-of-squared-errors-in-linear-regression" class="level1">
-<h1>Contour plots for Sum of Squared Errors in Linear Regression</h1>
+<section id="contour-plots-for-sum-of-squared-errors-in-linear-regression" class="level2">
+<h2 class="anchored" data-anchor-id="contour-plots-for-sum-of-squared-errors-in-linear-regression">Contour plots for Sum of Squared Errors in Linear Regression</h2>
 <hr>
 <p>For ease of visualization, let’s consider a 2D dataset which has <span class="math inline">\(n\)</span> datapoints each having two features, say <span class="math inline">\(x_1\)</span>, <span class="math inline">\(x_2\)</span>. The numerical values of these features for the <span class="math inline">\(i\)</span>-th vector <span class="math inline">\(\mathbf{x}_i\)</span> are denoted as <span class="math inline">\(x_{1i}\)</span> and <span class="math inline">\(x_{2i}\)</span>. The label for <span class="math inline">\(\mathbf{x}_i\)</span> is <span class="math inline">\(y_i\)</span>. The linear regression model is <span class="math display">\[
 f(\mathbf{w}, \mathbf{x}) = \mathbf{w}^T \mathbf{x} = w_1 x_1 + w_2 x_2
@@ -489,7 +489,12 @@ L(w_1, w_2) = \sum_{i=1}^n (w_1^2 x_{1i}^2  + w_2^2  x_{2i}^2 + y_i^2 + 2w_1 w_2
 L(w_1, w_2) = w_1^2 \sum_{i=1}^n x_{1i}^2  + w_2^2 \sum_{i=1}^n x_{2i}^2  + \sum_{i=1}^n y_i^2 + 2w_1 w_2 \sum_{i=1}^n x_{1i} x_{2i}  - 2 w_1 \sum_{i=1}^n x_{1i} y_i - 2 w_2 \sum_{i=1}^n x_{2i} y_i
 \]</span> Notice that each of the sums above are constants depending on the dataset. As the SSE is a quadratic function in <span class="math inline">\(w_1\)</span>, <span class="math inline">\(w_2\)</span> of the form <span class="math display">\[
 L(w_1, w_2) = a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c \\
-\]</span> where $a = <em>{i=1}^n x</em>{1i}^2 $, <span class="math inline">\(b = \sum_{i=1}^n x_{2i}^2\)</span>, $h = <em>{i=1}^n x</em>{1i} x_{2i} $, $ g = - <em>{i=1}^n x</em>{1i}y_i$, $ f = - <em>{i=1}^n x</em>{2i}y_i$ and <span class="math inline">\(c = \sum_{i=1}^n y_i^2\)</span>.</p>
+\]</span> where <span class="math display">\[
+a = \sum_{i=1}^n x_{1i}^2, \quad b = \sum_{i=1}^n x_{2i}^2, \quad c = \sum_{i=1}^n y_i^2,
+\]</span></p>
+<p><span class="math display">\[
+h = \sum_{i=1}^n x_{1i} x_{2i}, \quad g = - \sum_{i=1}^n x_{1i}y_i, \quad f = - \sum_{i=1}^n x_{2i}y_i.
+\]</span></p>
 <p>The contour plots are equations of the form <span class="math display">\[
 a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c = z
 \]</span> for some real constant <span class="math inline">\(z\)</span>. These equations, in general, represent <strong>conic sections</strong>. In fact, because of Cauchy-Schwarz inequality, <span class="math inline">\(h^2 -ab \le 0\)</span>, hence the conic section is an ellipse (if <span class="math inline">\(h^2 -ab &lt;0\)</span>) or a parabola (if <span class="math inline">\(h^2=ab\)</span>).</p>
