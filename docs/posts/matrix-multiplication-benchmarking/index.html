@@ -8,9 +8,9 @@
 
 <meta name="author" content="Anant Kumar">
 <meta name="dcterms.date" content="2026-01-26">
-<meta name="description" content="Optimizing Matrix Multiplication from naive loops to Tiled AVX2 + OpenMP.">
+<meta name="description" content="Optimizing Matrix Multiplication from naive loops to Tiled OpenMP.">
 
-<title>76x Faster: Benchmarking Matrix Multiplication in C – Anant’s Blog</title>
+<title>From Scratch: Optimizing Matrix Multiplication in C – Anant’s Blog</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -188,7 +188,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Recent Posts</li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">Posts</a></li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">76x Faster: Benchmarking Matrix Multiplication in C</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Recent Posts</li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">Posts</a></li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">From Scratch: Optimizing Matrix Multiplication in C</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -197,11 +197,11 @@ window.Quarto = {
 <!-- content -->
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
-    <div class="quarto-title column-body"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Recent Posts</li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">Posts</a></li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">76x Faster: Benchmarking Matrix Multiplication in C</a></li></ol></nav>
-      <h1 class="title">76x Faster: Benchmarking Matrix Multiplication in C</h1>
+    <div class="quarto-title column-body"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Recent Posts</li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">Posts</a></li><li class="breadcrumb-item"><a href="../../posts/matrix-multiplication-benchmarking/index.html">From Scratch: Optimizing Matrix Multiplication in C</a></li></ol></nav>
+      <h1 class="title">From Scratch: Optimizing Matrix Multiplication in C</h1>
                   <div>
         <div class="description">
-          Optimizing Matrix Multiplication from naive loops to Tiled AVX2 + OpenMP.
+          Optimizing Matrix Multiplication from naive loops to Tiled OpenMP.
         </div>
       </div>
                           <div class="quarto-categories">
@@ -260,13 +260,19 @@ window.Quarto = {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../posts/matrix-multiplication-benchmarking/index.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">76x Faster: Benchmarking Matrix Multiplication in C</span></a>
+ <span class="menu-text">From Scratch: Optimizing Matrix Multiplication in C</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../../posts/contour-plots/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Visualizing Functions with Contour Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/monte-carlo-random-stick-break/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation</span></a>
   </div>
 </li>
       </ul>
@@ -283,8 +289,21 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#the-benchmark-results" id="toc-the-benchmark-results" class="nav-link active" data-scroll-target="#the-benchmark-results">The Benchmark Results</a></li>
-  <li><a href="#the-naive-approach" id="toc-the-naive-approach" class="nav-link" data-scroll-target="#the-naive-approach">1. The Naive Approach</a></li>
+  <li><a href="#the-benchmark-setup" id="toc-the-benchmark-setup" class="nav-link active" data-scroll-target="#the-benchmark-setup">The Benchmark Setup</a></li>
+  <li><a href="#method-1-the-naive-approach" id="toc-method-1-the-naive-approach" class="nav-link" data-scroll-target="#method-1-the-naive-approach">Method 1: The Naive Approach</a></li>
+  <li><a href="#method-2-loop-reordering" id="toc-method-2-loop-reordering" class="nav-link" data-scroll-target="#method-2-loop-reordering">Method 2: Loop Reordering</a></li>
+  <li><a href="#method-3-simd-avx2-intrinsics" id="toc-method-3-simd-avx2-intrinsics" class="nav-link" data-scroll-target="#method-3-simd-avx2-intrinsics">Method 3: SIMD (AVX2 Intrinsics)</a>
+  <ul class="collapse">
+  <li><a href="#the-result" id="toc-the-result" class="nav-link" data-scroll-target="#the-result">The Result</a></li>
+  <li><a href="#the-surprise" id="toc-the-surprise" class="nav-link" data-scroll-target="#the-surprise">The Surprise</a></li>
+  </ul></li>
+  <li><a href="#method-4-openmp-multicore-parallelism" id="toc-method-4-openmp-multicore-parallelism" class="nav-link" data-scroll-target="#method-4-openmp-multicore-parallelism">Method 4: OpenMP (Multicore Parallelism)</a>
+  <ul class="collapse">
+  <li><a href="#the-result-1" id="toc-the-result-1" class="nav-link" data-scroll-target="#the-result-1">The Result</a></li>
+  </ul></li>
+  <li><a href="#the-benchmark-results" id="toc-the-benchmark-results" class="nav-link" data-scroll-target="#the-benchmark-results">The Benchmark Results</a></li>
+  <li><a href="#the-results-visualization" id="toc-the-results-visualization" class="nav-link" data-scroll-target="#the-results-visualization">The Results Visualization</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
   </ul>
 </nav>
     </div>
@@ -295,17 +314,111 @@ window.Quarto = {
 
 
 
-<p>In order to understand the transformer architecture, I endeavoured to build it from scratch using C. Pretty soon, I understood that unless I get an efficient method to multiply matrices, the implementation won’t be efficient. Matrix multiplication is the “Hello World” of high-performance computing. In this post, I explore how much performance we can squeeze out of a standard matrix multiplication, <span class="math inline">\(C = A B\)</span> (where <span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span>, <span class="math inline">\(C\)</span> are matrices of suitable dimensions), operation on just a CPU.</p>
-<p>I tested four implementations on a square matrix of size <strong><span class="math inline">\(N = 2048\)</span></strong>:</p>
-<ol type="1">
-<li><strong>Naive:</strong> Standard <span class="math inline">\(i, j, k\)</span> triple loop.</li>
-<li><strong>Loop Reordered:</strong> Changing memory access patterns to be cache-friendly.</li>
-<li><strong>SIMD:</strong> Using AVX2 intrinsics for parallelism within a single core.</li>
-<li><strong>Tiled + OpenMP + SIMD:</strong> The kitchen sink approach.</li>
-</ol>
+<p>I recently decided to take on a challenge: building a Transformer architecture (the brain behind LLMs) completely from scratch in C. No PyTorch, no TensorFlow, just raw memory management and pointers.</p>
+<p>My goal was to demystify the “black box.” But very quickly, I ran into a wall. The core operation of a Transformer—Self-Attention—is essentially a series of massive matrix multiplications. If your <code>matmul</code> function is slow, your model is dead in the water.</p>
+<p>So, I took a detour to benchmark and optimize matrix multiplication. I wrote a C program to test four different implementations, ranging from the textbook definition to a parallelized, vector-instruction-heavy version.</p>
+<section id="the-benchmark-setup" class="level2">
+<h2 class="anchored" data-anchor-id="the-benchmark-setup">The Benchmark Setup</h2>
+<p>I wrote a C program that generates two random <span class="math inline">\(N \times N\)</span> matrices (<span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>) and computes their product <span class="math inline">\(C\)</span>. I tested this for various sizes of <span class="math inline">\(N\)</span>, up to 2048.</p>
+<p>The compilation flags were critical here. I used: <code>gcc -O3 -march=native -fopenmp</code></p>
+<p>This tells the compiler to optimize aggressively (<code>-O3</code>) and use every instruction set available on my specific CPU (<code>-march=native</code>), including AVX2 for vector math.</p>
+</section>
+<section id="method-1-the-naive-approach" class="level2">
+<h2 class="anchored" data-anchor-id="method-1-the-naive-approach">Method 1: The Naive Approach</h2>
+<p>This is the standard <span class="math inline">\(O(N^3)\)</span> algorithm you learn in matrix algebra. It iterates through rows of <span class="math inline">\(A\)</span> and columns of <span class="math inline">\(B\)</span>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// --- 1. Naive Implementation ---</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> matmul_naive<span class="op">(</span><span class="dt">double</span> <span class="op">*</span>A<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>B<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>C<span class="op">,</span> <span class="dt">int</span> rowsA<span class="op">,</span> <span class="dt">int</span> colsA<span class="op">,</span> <span class="dt">int</span> colsB<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">,</span> j<span class="op">,</span> k<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> rowsA<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span>j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;</span> colsB<span class="op">;</span> <span class="op">++</span>j<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>            C<span class="op">[</span>i <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">]</span> <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span>k <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k <span class="op">&lt;</span> colsA<span class="op">;</span> <span class="op">++</span>k<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>                C<span class="op">[</span>i <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">]</span> <span class="op">+=</span> A<span class="op">[</span>i <span class="op">*</span> colsA <span class="op">+</span> k<span class="op">]</span> <span class="op">*</span> B<span class="op">[</span>k <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">];</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>The Result:</strong></p>
+<ul>
+<li><p><strong>Time(N=1024):</strong> ~8.06 seconds</p></li>
+<li><p><strong>Time(N=2048):</strong> ~79.25 seconds</p></li>
+</ul>
+<p><strong>The Problem: Cache Thrashing</strong></p>
+<p>The naive approach is a disaster for modern CPUs. While <code>A</code> is accessed sequentially (good), <code>B</code> is accessed column-wise (<code>B[k * colsB + j]</code>). In memory, this means we are jumping over <code>colsB</code> elements for every single multiplication. This causes constant cache misses, forcing the CPU to fetch data from the slow main RAM.</p>
+</section>
+<section id="method-2-loop-reordering" class="level2">
+<h2 class="anchored" data-anchor-id="method-2-loop-reordering">Method 2: Loop Reordering</h2>
+<p>We can fix the cache issue by simply swapping the inner loops. Instead of <code>i-j-k</code>, we iterate <code>i-k-j</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// --- 2. Loop Reordered ---</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> matmul_reordered<span class="op">(</span><span class="dt">double</span> <span class="op">*</span>A<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>B<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>C<span class="op">,</span> <span class="dt">int</span> rowsA<span class="op">,</span> <span class="dt">int</span> colsA<span class="op">,</span> <span class="dt">int</span> colsB<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">,</span> j<span class="op">,</span> k<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... init C to 0 ...</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> rowsA<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span>k <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k <span class="op">&lt;</span> colsA<span class="op">;</span> <span class="op">++</span>k<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>            <span class="dt">double</span> r <span class="op">=</span> A<span class="op">[</span>i <span class="op">*</span> colsA <span class="op">+</span> k<span class="op">];</span> <span class="co">// Load A once</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span>j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;</span> colsB<span class="op">;</span> <span class="op">++</span>j<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>                C<span class="op">[</span>i <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">]</span> <span class="op">+=</span> r <span class="op">*</span> B<span class="op">[</span>k <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">];</span> <span class="co">// Sequential access!</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>The Result:</strong></p>
+<ul>
+<li><p><strong>Time(N=1024):</strong> ~0.44 seconds</p></li>
+<li><p><strong>Time(N=2048):</strong> ~4.76 seconds</p></li>
+</ul>
+<p><strong>Why it works</strong></p>
+<p>By moving <code>k</code> to the middle loop, the inner loop <code>j</code> now iterates through contiguous memory for both <span class="math inline">\(B\)</span> and <span class="math inline">\(C\)</span>. This simple change resulted in a <strong>16x speedup</strong> for <span class="math inline">\(N=2048\)</span>.</p>
+</section>
+<section id="method-3-simd-avx2-intrinsics" class="level2">
+<h2 class="anchored" data-anchor-id="method-3-simd-avx2-intrinsics">Method 3: SIMD (AVX2 Intrinsics)</h2>
+<p>Next, I tried to beat the compiler by manually writing vectorized code using AVX2 intrinsics. This allows the CPU to multiply 4 doubles at once.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// --- 3. SIMD (AVX2 Intrinsics) --- </span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> matmul_simd<span class="op">(</span><span class="dt">double</span> <span class="op">*</span>A<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>B<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>C<span class="op">,</span> <span class="dt">int</span> rowsA<span class="op">,</span> <span class="dt">int</span> colsA<span class="op">,</span> <span class="dt">int</span> colsB<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>            __m256d valA <span class="op">=</span> _mm256_set1_pd<span class="op">(</span>A<span class="op">[</span>i <span class="op">*</span> colsA <span class="op">+</span> k<span class="op">]);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span>j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;=</span> colsB <span class="op">-</span> <span class="dv">4</span><span class="op">;</span> j <span class="op">+=</span> <span class="dv">4</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Load 4 values, Multiply-Add, Store</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>                __m256d valC <span class="op">=</span> _mm256_loadu_pd<span class="op">(&amp;</span>C<span class="op">[</span>i <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">]);</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>                __m256d valB <span class="op">=</span> _mm256_loadu_pd<span class="op">(&amp;</span>B<span class="op">[</span>k <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">]);</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                __m256d result <span class="op">=</span> _mm256_fmadd_pd<span class="op">(</span>valA<span class="op">,</span> valB<span class="op">,</span> valC<span class="op">);</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                _mm256_storeu_pd<span class="op">(&amp;</span>C<span class="op">[</span>i <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">],</span> result<span class="op">);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="the-result" class="level3">
+<h3 class="anchored" data-anchor-id="the-result">The Result</h3>
+<ul>
+<li><p><strong>Time (N=1024):</strong> ~0.44s</p></li>
+<li><p><strong>Time (N=2048):</strong> ~4.77s</p></li>
+</ul>
+</section>
+<section id="the-surprise" class="level3">
+<h3 class="anchored" data-anchor-id="the-surprise">The Surprise</h3>
+<p>The manual SIMD code performed almost <strong>identically</strong> to the Reordered code. Why? Because I compiled with <code>-O3 -march=native</code>. The GCC compiler is smart enough to see the sequential access pattern in the Reordered code and <strong>auto-vectorize</strong> it, generating the exact same AVX instructions I wrote manually.</p>
+</section>
+</section>
+<section id="method-4-openmp-multicore-parallelism" class="level2">
+<h2 class="anchored" data-anchor-id="method-4-openmp-multicore-parallelism">Method 4: OpenMP (Multicore Parallelism)</h2>
+<p>Finally, I used OpenMP to utilize all the cores on my CPU. Since each row of the result matrix is independent, this is <strong>embarrassingly parallel</strong>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// --- 4. OpenMP ---</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> matmul_omp<span class="op">(</span><span class="dt">double</span> <span class="op">*</span>A<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>B<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>C<span class="op">,</span> <span class="dt">int</span> rowsA<span class="op">,</span> <span class="dt">int</span> colsA<span class="op">,</span> <span class="dt">int</span> colsB<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="pp">#pragma omp parallel for private(i, j, k) shared(A, B, C)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> rowsA<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... same logic as SIMD ...</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="the-result-1" class="level3">
+<h3 class="anchored" data-anchor-id="the-result-1">The Result</h3>
+<ul>
+<li><p><strong>Time (N=1024):</strong> ~0.16s</p></li>
+<li><p><strong>Time (N=2048):</strong> ~1.49s</p></li>
+</ul>
+</section>
+</section>
 <section id="the-benchmark-results" class="level2">
 <h2 class="anchored" data-anchor-id="the-benchmark-results">The Benchmark Results</h2>
-<p>The performance difference was massive. The final optimized version was <strong>76x faster</strong> than the naive implementation (estimated).</p>
+<p>The performance difference was massive. The following table summarizes the results for <strong>N=2048</strong>. The final optimized version was around <strong>53x faster</strong> than the naive implementation.</p>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -317,45 +430,43 @@ window.Quarto = {
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">Naive</td>
-<td style="text-align: right;">~84.0 s</td>
+<td style="text-align: right;">79.25 s</td>
 <td style="text-align: right;">1.0x</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Loop Reordered</td>
-<td style="text-align: right;">~12.5 s</td>
-<td style="text-align: right;">6.7x</td>
+<td style="text-align: right;">4.76 s</td>
+<td style="text-align: right;">16.6x</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">SIMD (AVX2)</td>
-<td style="text-align: right;">~3.8 s</td>
-<td style="text-align: right;">22.1x</td>
+<td style="text-align: right;">4.77 s</td>
+<td style="text-align: right;">16.6x</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Tiled + OpenMP + SIMD</strong></td>
-<td style="text-align: right;"><strong>1.10 s</strong></td>
-<td style="text-align: right;"><strong>76.4x</strong></td>
+<td style="text-align: left;"><strong>OpenMP + SIMD</strong></td>
+<td style="text-align: right;"><strong>1.49 s</strong></td>
+<td style="text-align: right;"><strong>53.2x</strong></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="the-naive-approach" class="level2">
-<h2 class="anchored" data-anchor-id="the-naive-approach">1. The Naive Approach</h2>
-<p>The mathematical definition of matrix multiplication is straightforward: <span class="math display">\[C_{ij} = \sum_k A_{ik} B_{kj}\]</span></p>
-<p>In C, this translates to three nested loops.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode c code-with-copy"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// --- 1. Naive Implementation ---</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> matmul_naive<span class="op">(</span><span class="dt">double</span> <span class="op">*</span>A<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>B<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>C<span class="op">,</span> <span class="dt">int</span> rowsA<span class="op">,</span> <span class="dt">int</span> colsA<span class="op">,</span> <span class="dt">int</span> colsB<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">,</span> j<span class="op">,</span> k<span class="op">;</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> rowsA<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span>j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;</span> colsB<span class="op">;</span> <span class="op">++</span>j<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>            <span class="dt">double</span> sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span>k <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> k <span class="op">&lt;</span> colsA<span class="op">;</span> <span class="op">++</span>k<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>                sum <span class="op">+=</span> A<span class="op">[</span>i <span class="op">*</span> colsA <span class="op">+</span> k<span class="op">]</span> <span class="op">*</span> B<span class="op">[</span>k <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">];</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            C<span class="op">[</span>i <span class="op">*</span> colsB <span class="op">+</span> j<span class="op">]</span> <span class="op">=</span> sum<span class="op">;</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p><strong>The Problem:</strong> This approach suffers from poor <strong>cache locality</strong>. As we iterate through <span class="math inline">\(B_{kj}\)</span> (inner loop on <code>k</code>), we are jumping across memory rows. Since C stores arrays in row-major order, this leads to frequent cache misses.</p>
+<section id="the-results-visualization" class="level2">
+<h2 class="anchored" data-anchor-id="the-results-visualization">The Results Visualization</h2>
+<p>I plotted the execution time vs.&nbsp;matrix size (<span class="math inline">\(N\)</span>) on a logarithmic scale.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/matmul_performance.png" class="img-fluid figure-img" alt="Comparison of various methods of Matrix Multiplication"></p>
+<figcaption>Comparison of various methods of Matrix Multiplication</figcaption>
+</figure>
+</div>
+<p>The graph clearly shows the exponential penalty of the Naive approach. The blue line (Naive) shoots up immediately. The orange (Reordered) and Green (SIMD) lines overlap perfectly, confirming the auto-vectorization theory. The red line (OpenMP) sits at the bottom, offering the best performance.</p>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>For a <span class="math inline">\(2048 \times 2048\)</span> matrix multiplication, simply changing how we access memory and turning on compiler flags reduced the runtime from <strong>79.25 seconds</strong> to <strong>1.49 seconds</strong>. That is a <strong>53x speedup</strong>.</p>
+<p>While we hit a “Memory Wall” (the CPU cores are hungry for data faster than RAM can provide), this exercise proves that before you try to implement complex neural networks, you need to understand the hardware they run on.</p>
+<p>Next stop: implementing <strong>Block Tiling</strong> to break that memory wall and get even closer to the theoretical limits of the hardware.</p>
 
 
 </section>

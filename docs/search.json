@@ -7,52 +7,6 @@
     "text": "About this blog"
   },
   {
-    "objectID": "posts/matrix-multiplication-benchmarking/index.html",
-    "href": "posts/matrix-multiplication-benchmarking/index.html",
-    "title": "76x Faster: Benchmarking Matrix Multiplication in C",
-    "section": "",
-    "text": "In order to understand the transformer architecture, I endeavoured to build it from scratch using C. Pretty soon, I understood that unless I get an efficient method to multiply matrices, the implementation won’t be efficient. Matrix multiplication is the “Hello World” of high-performance computing. In this post, I explore how much performance we can squeeze out of a standard matrix multiplication, \\(C = A B\\) (where \\(A\\), \\(B\\), \\(C\\) are matrices of suitable dimensions), operation on just a CPU.\nI tested four implementations on a square matrix of size \\(N = 2048\\):",
-    "crumbs": [
-      "About",
-      "Recent Posts",
-      "Posts",
-      "76x Faster: Benchmarking Matrix Multiplication in C"
-    ]
-  },
-  {
-    "objectID": "posts/matrix-multiplication-benchmarking/index.html#the-benchmark-results",
-    "href": "posts/matrix-multiplication-benchmarking/index.html#the-benchmark-results",
-    "title": "76x Faster: Benchmarking Matrix Multiplication in C",
-    "section": "The Benchmark Results",
-    "text": "The Benchmark Results\nThe performance difference was massive. The final optimized version was 76x faster than the naive implementation (estimated).\n\n\n\nImplementation\nExecution Time (s)\nSpeedup\n\n\n\n\nNaive\n~84.0 s\n1.0x\n\n\nLoop Reordered\n~12.5 s\n6.7x\n\n\nSIMD (AVX2)\n~3.8 s\n22.1x\n\n\nTiled + OpenMP + SIMD\n1.10 s\n76.4x",
-    "crumbs": [
-      "About",
-      "Recent Posts",
-      "Posts",
-      "76x Faster: Benchmarking Matrix Multiplication in C"
-    ]
-  },
-  {
-    "objectID": "posts/matrix-multiplication-benchmarking/index.html#the-naive-approach",
-    "href": "posts/matrix-multiplication-benchmarking/index.html#the-naive-approach",
-    "title": "76x Faster: Benchmarking Matrix Multiplication in C",
-    "section": "1. The Naive Approach",
-    "text": "1. The Naive Approach\nThe mathematical definition of matrix multiplication is straightforward: \\[C_{ij} = \\sum_k A_{ik} B_{kj}\\]\nIn C, this translates to three nested loops.\n// --- 1. Naive Implementation ---\nvoid matmul_naive(double *A, double *B, double *C, int rowsA, int colsA, int colsB) {\n    int i, j, k;\n    for (i = 0; i &lt; rowsA; ++i) {\n        for (j = 0; j &lt; colsB; ++j) {\n            double sum = 0;\n            for (k = 0; k &lt; colsA; ++k) {\n                sum += A[i * colsA + k] * B[k * colsB + j];\n            }\n            C[i * colsB + j] = sum;\n        }\n    }\n}\nThe Problem: This approach suffers from poor cache locality. As we iterate through \\(B_{kj}\\) (inner loop on k), we are jumping across memory rows. Since C stores arrays in row-major order, this leads to frequent cache misses.",
-    "crumbs": [
-      "About",
-      "Recent Posts",
-      "Posts",
-      "76x Faster: Benchmarking Matrix Multiplication in C"
-    ]
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "blogs",
-    "section": "",
-    "text": "76x Faster: Benchmarking Matrix Multiplication in C\n\n\n\nC\n\nHPC\n\nLinear Algebra\n\nOptimization\n\n\n\nOptimizing Matrix Multiplication from naive loops to Tiled AVX2 + OpenMP.\n\n\n\n\n\nJan 26, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nVisualizing Functions with Contour Plots\n\n\n\nMathematics\n\nPython\n\nVisualization\n\n\n\nA guide to visualizing 2D functions as 3D surfaces and contour maps using Python and Matplotlib.\n\n\n\n\n\nJan 26, 2026\n\n\nAnant Kumar\n\n\n\n\n\nNo matching items"
-  },
-  {
     "objectID": "posts/contour-plots/index.html",
     "href": "posts/contour-plots/index.html",
     "title": "Visualizing Functions with Contour Plots",
@@ -76,6 +30,156 @@
       "Recent Posts",
       "Posts",
       "Visualizing Functions with Contour Plots"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "blogs",
+    "section": "",
+    "text": "Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation\n\n\n\nMathematics\n\nProbability\n\nPython\n\n\n\n\n\n\n\n\n\nFeb 11, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nFrom Scratch: Optimizing Matrix Multiplication in C\n\n\n\nC\n\nHPC\n\nLinear Algebra\n\nOptimization\n\n\n\nOptimizing Matrix Multiplication from naive loops to Tiled OpenMP.\n\n\n\n\n\nJan 26, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nVisualizing Functions with Contour Plots\n\n\n\nMathematics\n\nPython\n\nVisualization\n\n\n\nA guide to visualizing 2D functions as 3D surfaces and contour maps using Python and Matplotlib.\n\n\n\n\n\nJan 26, 2026\n\n\nAnant Kumar\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html",
+    "href": "posts/matrix-multiplication-benchmarking/index.html",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "",
+    "text": "I recently decided to take on a challenge: building a Transformer architecture (the brain behind LLMs) completely from scratch in C. No PyTorch, no TensorFlow, just raw memory management and pointers.\nMy goal was to demystify the “black box.” But very quickly, I ran into a wall. The core operation of a Transformer—Self-Attention—is essentially a series of massive matrix multiplications. If your matmul function is slow, your model is dead in the water.\nSo, I took a detour to benchmark and optimize matrix multiplication. I wrote a C program to test four different implementations, ranging from the textbook definition to a parallelized, vector-instruction-heavy version.",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#the-benchmark-setup",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#the-benchmark-setup",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "The Benchmark Setup",
+    "text": "The Benchmark Setup\nI wrote a C program that generates two random \\(N \\times N\\) matrices (\\(A\\) and \\(B\\)) and computes their product \\(C\\). I tested this for various sizes of \\(N\\), up to 2048.\nThe compilation flags were critical here. I used: gcc -O3 -march=native -fopenmp\nThis tells the compiler to optimize aggressively (-O3) and use every instruction set available on my specific CPU (-march=native), including AVX2 for vector math.",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#method-1-the-naive-approach",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#method-1-the-naive-approach",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "Method 1: The Naive Approach",
+    "text": "Method 1: The Naive Approach\nThis is the standard \\(O(N^3)\\) algorithm you learn in matrix algebra. It iterates through rows of \\(A\\) and columns of \\(B\\).\n// --- 1. Naive Implementation ---\nvoid matmul_naive(double *A, double *B, double *C, int rowsA, int colsA, int colsB) {\n    int i, j, k;\n    for (i = 0; i &lt; rowsA; ++i) {\n        for (j = 0; j &lt; colsB; ++j) {\n            C[i * colsB + j] = 0;\n            for (k = 0; k &lt; colsA; ++k) {\n                C[i * colsB + j] += A[i * colsA + k] * B[k * colsB + j];\n            }\n        }\n    }\n}\nThe Result:\n\nTime(N=1024): ~8.06 seconds\nTime(N=2048): ~79.25 seconds\n\nThe Problem: Cache Thrashing\nThe naive approach is a disaster for modern CPUs. While A is accessed sequentially (good), B is accessed column-wise (B[k * colsB + j]). In memory, this means we are jumping over colsB elements for every single multiplication. This causes constant cache misses, forcing the CPU to fetch data from the slow main RAM.",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#method-2-loop-reordering",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#method-2-loop-reordering",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "Method 2: Loop Reordering",
+    "text": "Method 2: Loop Reordering\nWe can fix the cache issue by simply swapping the inner loops. Instead of i-j-k, we iterate i-k-j.\n// --- 2. Loop Reordered ---\nvoid matmul_reordered(double *A, double *B, double *C, int rowsA, int colsA, int colsB) {\n    int i, j, k;\n    // ... init C to 0 ...\n    for (i = 0; i &lt; rowsA; ++i) {\n        for (k = 0; k &lt; colsA; ++k) {\n            double r = A[i * colsA + k]; // Load A once\n            for (j = 0; j &lt; colsB; ++j) {\n                C[i * colsB + j] += r * B[k * colsB + j]; // Sequential access!\n            }\n        }\n    }\n}\nThe Result:\n\nTime(N=1024): ~0.44 seconds\nTime(N=2048): ~4.76 seconds\n\nWhy it works\nBy moving k to the middle loop, the inner loop j now iterates through contiguous memory for both \\(B\\) and \\(C\\). This simple change resulted in a 16x speedup for \\(N=2048\\).",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#method-3-simd-avx2-intrinsics",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#method-3-simd-avx2-intrinsics",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "Method 3: SIMD (AVX2 Intrinsics)",
+    "text": "Method 3: SIMD (AVX2 Intrinsics)\nNext, I tried to beat the compiler by manually writing vectorized code using AVX2 intrinsics. This allows the CPU to multiply 4 doubles at once.\n// --- 3. SIMD (AVX2 Intrinsics) --- \nvoid matmul_simd(double *A, double *B, double *C, int rowsA, int colsA, int colsB) {\n    // ...\n            __m256d valA = _mm256_set1_pd(A[i * colsA + k]);\n            for (j = 0; j &lt;= colsB - 4; j += 4) {\n                // Load 4 values, Multiply-Add, Store\n                __m256d valC = _mm256_loadu_pd(&C[i * colsB + j]);\n                __m256d valB = _mm256_loadu_pd(&B[k * colsB + j]);\n                __m256d result = _mm256_fmadd_pd(valA, valB, valC);\n                _mm256_storeu_pd(&C[i * colsB + j], result);\n            }\n    // ...\n}\n\nThe Result\n\nTime (N=1024): ~0.44s\nTime (N=2048): ~4.77s\n\n\n\nThe Surprise\nThe manual SIMD code performed almost identically to the Reordered code. Why? Because I compiled with -O3 -march=native. The GCC compiler is smart enough to see the sequential access pattern in the Reordered code and auto-vectorize it, generating the exact same AVX instructions I wrote manually.",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#method-4-openmp-multicore-parallelism",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#method-4-openmp-multicore-parallelism",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "Method 4: OpenMP (Multicore Parallelism)",
+    "text": "Method 4: OpenMP (Multicore Parallelism)\nFinally, I used OpenMP to utilize all the cores on my CPU. Since each row of the result matrix is independent, this is embarrassingly parallel.\n// --- 4. OpenMP ---\nvoid matmul_omp(double *A, double *B, double *C, int rowsA, int colsA, int colsB) {\n    #pragma omp parallel for private(i, j, k) shared(A, B, C)\n    for (i = 0; i &lt; rowsA; ++i) {\n        // ... same logic as SIMD ...\n    }\n}\n\nThe Result\n\nTime (N=1024): ~0.16s\nTime (N=2048): ~1.49s",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#the-benchmark-results",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#the-benchmark-results",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "The Benchmark Results",
+    "text": "The Benchmark Results\nThe performance difference was massive. The following table summarizes the results for N=2048. The final optimized version was around 53x faster than the naive implementation.\n\n\n\nImplementation\nExecution Time (s)\nSpeedup\n\n\n\n\nNaive\n79.25 s\n1.0x\n\n\nLoop Reordered\n4.76 s\n16.6x\n\n\nSIMD (AVX2)\n4.77 s\n16.6x\n\n\nOpenMP + SIMD\n1.49 s\n53.2x",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#the-results-visualization",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#the-results-visualization",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "The Results Visualization",
+    "text": "The Results Visualization\nI plotted the execution time vs. matrix size (\\(N\\)) on a logarithmic scale.\n\n\n\nComparison of various methods of Matrix Multiplication\n\n\nThe graph clearly shows the exponential penalty of the Naive approach. The blue line (Naive) shoots up immediately. The orange (Reordered) and Green (SIMD) lines overlap perfectly, confirming the auto-vectorization theory. The red line (OpenMP) sits at the bottom, offering the best performance.",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/matrix-multiplication-benchmarking/index.html#conclusion",
+    "href": "posts/matrix-multiplication-benchmarking/index.html#conclusion",
+    "title": "From Scratch: Optimizing Matrix Multiplication in C",
+    "section": "Conclusion",
+    "text": "Conclusion\nFor a \\(2048 \\times 2048\\) matrix multiplication, simply changing how we access memory and turning on compiler flags reduced the runtime from 79.25 seconds to 1.49 seconds. That is a 53x speedup.\nWhile we hit a “Memory Wall” (the CPU cores are hungry for data faster than RAM can provide), this exercise proves that before you try to implement complex neural networks, you need to understand the hardware they run on.\nNext stop: implementing Block Tiling to break that memory wall and get even closer to the theoretical limits of the hardware.",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "From Scratch: Optimizing Matrix Multiplication in C"
+    ]
+  },
+  {
+    "objectID": "posts/monte-carlo-random-stick-break/index.html",
+    "href": "posts/monte-carlo-random-stick-break/index.html",
+    "title": "Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation",
+    "section": "",
+    "text": "If a stick is broken randomly into three pieces, what is the chance that the three pieces can be used to form a triangle?\n\n\n\n\nSince the length of the stick doesn’t affect the probability, we set the length as unity: \\(L=1\\).\nLet the length of the pieces after breaking the stick be \\(x\\), \\(y\\), and \\(1-(x+y)\\). The quantities \\(x\\) and \\(y\\) are independent and uniformly distributed in \\([0,1]\\). For the pieces to physically exist, the sum of the first two breaks must be less than the total length: \\[0 &lt; x &lt; 1, \\quad 0 &lt; y &lt; 1, \\quad 0 &lt; x + y &lt; 1\\]\nThis defines our Sample Space, a right-angled triangle in the \\(xy\\)-plane with vertices at \\((0,0), (1,0),\\) and \\((0,1)\\) depicted in the figure below:\n\n\n\nSample Space\n\n\n\n\nIn order for the three lengths to form a triangle, the following must hold: 1. \\(x + y &gt; 1 - (x + y) \\implies x + y &gt; 1/2\\) 2. \\(x + (1 - x - y) &gt; y \\implies y &lt; 1/2\\) 3. \\(y + (1 - x - y) &gt; x \\implies x &lt; 1/2\\)\nThese inequalities define the Favorable Outcomes: \\[0 &lt; x &lt; 1/2, \\quad 0 &lt; y &lt; 1/2, \\quad 1/2 &lt; x + y &lt; 1\\]\n\n\n\nFavourable Outcomes\n\n\n\n\n\n\n\nBelow is a live simulation. As the points populate, you will see the blue region (Sample Space) and the red region (Favorable Outcomes) take shape. Notice how the red area occupies exactly \\(1/4\\) of the blue area.\n\n\nShow the Code\nimport numpy as np\nimport matplotlib.pyplot as plt\nfrom matplotlib.animation import FuncAnimation\nfrom matplotlib import rc\n\n# Set up animation to render as interactive JavaScript in the blog\nrc('animation', html='jshtml')\n\ndef run_stick_simulation(total_frames=60):\n    fig, ax = plt.subplots(figsize=(6, 6))\n    ax.set_aspect('equal')\n    ax.set_xlim(0, 1)\n    ax.set_ylim(0, 1)\n    ax.set_xlabel(\"Length of piece 1 (x)\")\n    ax.set_ylabel(\"Length of piece 2 (y)\")\n    \n    # Initialize point objects\n    sample_points, = ax.plot([], [], 'o', color='blue', markersize=0.8, alpha=0.6, label='Sample Space')\n    favorable_points, = ax.plot([], [], 'o', color='red', markersize=0.8, label='Favorable Outcomes')\n    ax.legend(loc='upper right')\n    \n    x_s, y_s = [], []\n    x_f, y_f = [], []\n\n    def update(frame):\n        # Exponentially increase points per frame for a smooth visual 'reveal'\n        points_to_add = int(15 * (1.12**frame))\n        \n        new_x = np.random.uniform(0, 1, points_to_add)\n        new_y = np.random.uniform(0, 1, points_to_add)\n        \n        for x, y in zip(new_x, new_y):\n            z = 1 - (x + y)\n            if z &gt; 0: # Inside the sample space\n                x_s.append(x)\n                y_s.append(y)\n                # Check triangle inequality\n                if (x + y &gt; z) and (y + z &gt; x) and (z + x &gt; y):\n                    x_f.append(x)\n                    y_f.append(y)\n        \n        sample_points.set_data(x_s, y_s)\n        favorable_points.set_data(x_f, y_f)\n        \n        if len(x_s) &gt; 0:\n            prob = len(x_f) / len(x_s)\n            ax.set_title(f\"Simulations: {len(x_s)} | Probability: {prob:.4f}\")\n        \n        return sample_points, favorable_points\n\n    ani = FuncAnimation(fig, update, frames=total_frames, interval=50, blit=True)\n    plt.close() # Prevents extra static plot from showing\n    return ani\n\nrun_stick_simulation()\n\n\n\n\n\n\n\n\n\n\n\n  \n  \n    \n    \n      \n          \n      \n        \n      \n          \n      \n          \n      \n          \n      \n          \n      \n          \n      \n          \n      \n          \n    \n    \n      \n      Once\n      \n      Loop\n      \n      Reflect\n    \n  \n\n\n\n\n\n\nFigure 1: Watch the Monte Carlo simulation converge to 0.25\n\n\n\n\nConclusion\nAs the number of simulations increases, the ratio of red points to blue points converges to 0.25. Geometrically, this is because the favorable region forms a triangle with area \\(1/8\\), while the total sample space triangle has an area of \\(1/2\\).\n\\[\\text{Probability} = \\frac{\\text{Area(Favorable)}}{\\text{Area(Sample)}} = \\frac{1/8}{1/2} = \\frac{1}{4}\\]",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation"
+    ]
+  },
+  {
+    "objectID": "posts/monte-carlo-random-stick-break/index.html#monte-carlo-simulation-of-randomly-breaking-a-stick-to-form-a-triangle",
+    "href": "posts/monte-carlo-random-stick-break/index.html#monte-carlo-simulation-of-randomly-breaking-a-stick-to-form-a-triangle",
+    "title": "Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation",
+    "section": "",
+    "text": "If a stick is broken randomly into three pieces, what is the chance that the three pieces can be used to form a triangle?\n\n\n\n\nSince the length of the stick doesn’t affect the probability, we set the length as unity: \\(L=1\\).\nLet the length of the pieces after breaking the stick be \\(x\\), \\(y\\), and \\(1-(x+y)\\). The quantities \\(x\\) and \\(y\\) are independent and uniformly distributed in \\([0,1]\\). For the pieces to physically exist, the sum of the first two breaks must be less than the total length: \\[0 &lt; x &lt; 1, \\quad 0 &lt; y &lt; 1, \\quad 0 &lt; x + y &lt; 1\\]\nThis defines our Sample Space, a right-angled triangle in the \\(xy\\)-plane with vertices at \\((0,0), (1,0),\\) and \\((0,1)\\) depicted in the figure below:\n\n\n\nSample Space\n\n\n\n\nIn order for the three lengths to form a triangle, the following must hold: 1. \\(x + y &gt; 1 - (x + y) \\implies x + y &gt; 1/2\\) 2. \\(x + (1 - x - y) &gt; y \\implies y &lt; 1/2\\) 3. \\(y + (1 - x - y) &gt; x \\implies x &lt; 1/2\\)\nThese inequalities define the Favorable Outcomes: \\[0 &lt; x &lt; 1/2, \\quad 0 &lt; y &lt; 1/2, \\quad 1/2 &lt; x + y &lt; 1\\]\n\n\n\nFavourable Outcomes\n\n\n\n\n\n\n\nBelow is a live simulation. As the points populate, you will see the blue region (Sample Space) and the red region (Favorable Outcomes) take shape. Notice how the red area occupies exactly \\(1/4\\) of the blue area.\n\n\nShow the Code\nimport numpy as np\nimport matplotlib.pyplot as plt\nfrom matplotlib.animation import FuncAnimation\nfrom matplotlib import rc\n\n# Set up animation to render as interactive JavaScript in the blog\nrc('animation', html='jshtml')\n\ndef run_stick_simulation(total_frames=60):\n    fig, ax = plt.subplots(figsize=(6, 6))\n    ax.set_aspect('equal')\n    ax.set_xlim(0, 1)\n    ax.set_ylim(0, 1)\n    ax.set_xlabel(\"Length of piece 1 (x)\")\n    ax.set_ylabel(\"Length of piece 2 (y)\")\n    \n    # Initialize point objects\n    sample_points, = ax.plot([], [], 'o', color='blue', markersize=0.8, alpha=0.6, label='Sample Space')\n    favorable_points, = ax.plot([], [], 'o', color='red', markersize=0.8, label='Favorable Outcomes')\n    ax.legend(loc='upper right')\n    \n    x_s, y_s = [], []\n    x_f, y_f = [], []\n\n    def update(frame):\n        # Exponentially increase points per frame for a smooth visual 'reveal'\n        points_to_add = int(15 * (1.12**frame))\n        \n        new_x = np.random.uniform(0, 1, points_to_add)\n        new_y = np.random.uniform(0, 1, points_to_add)\n        \n        for x, y in zip(new_x, new_y):\n            z = 1 - (x + y)\n            if z &gt; 0: # Inside the sample space\n                x_s.append(x)\n                y_s.append(y)\n                # Check triangle inequality\n                if (x + y &gt; z) and (y + z &gt; x) and (z + x &gt; y):\n                    x_f.append(x)\n                    y_f.append(y)\n        \n        sample_points.set_data(x_s, y_s)\n        favorable_points.set_data(x_f, y_f)\n        \n        if len(x_s) &gt; 0:\n            prob = len(x_f) / len(x_s)\n            ax.set_title(f\"Simulations: {len(x_s)} | Probability: {prob:.4f}\")\n        \n        return sample_points, favorable_points\n\n    ani = FuncAnimation(fig, update, frames=total_frames, interval=50, blit=True)\n    plt.close() # Prevents extra static plot from showing\n    return ani\n\nrun_stick_simulation()\n\n\n\n\n\n\n\n\n\n\n\n  \n  \n    \n    \n      \n          \n      \n        \n      \n          \n      \n          \n      \n          \n      \n          \n      \n          \n      \n          \n      \n          \n    \n    \n      \n      Once\n      \n      Loop\n      \n      Reflect\n    \n  \n\n\n\n\n\n\nFigure 1: Watch the Monte Carlo simulation converge to 0.25\n\n\n\n\nConclusion\nAs the number of simulations increases, the ratio of red points to blue points converges to 0.25. Geometrically, this is because the favorable region forms a triangle with area \\(1/8\\), while the total sample space triangle has an area of \\(1/2\\).\n\\[\\text{Probability} = \\frac{\\text{Area(Favorable)}}{\\text{Area(Sample)}} = \\frac{1/8}{1/2} = \\frac{1}{4}\\]",
+    "crumbs": [
+      "About",
+      "Recent Posts",
+      "Posts",
+      "Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation"
     ]
   }
 ]
