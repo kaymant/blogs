@@ -1,6 +1,7 @@
 ---
 title: "Pseudorandom Number Generators: Linear Congruential Generators"
 description: "A discussion on Randomness, Pseudorandomness, and Linear Congruential Generators (LCGs)."
+image: "images/rand_hidden_corelations.png"
 author: "Anant Kumar"
 date: "2026-02-23"
 categories: [Randomness, Pseudorandomness, LCGs, Statistical Computing]
@@ -221,3 +222,5 @@ fig.update_layout(
 
 fig.show()
 ```
+
+In the next blog post, we will explore the multiplicative congruential generator in more detail, and see how to generate uniformly distributed random numbers in the interval [0,1] using LCGs, which can then be used to generate random numbers from other distributions.
