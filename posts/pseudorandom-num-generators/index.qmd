@@ -179,7 +179,7 @@ Researchers Ian Goldberg and David Wagner discovered that because these variable
 
 In the following code, the specific parameters define **RANDU**, a notorious **multiplicative** congruential generator (since $c=0$ ) that was widely used on mainframe computers in the 1960s and 70s. As the Spectral test below demonstrates, it suffers from a massive defect: when used to generate coordinates in 3D space, all resulting points fall onto only **15 parallel planes**. This represents a severe "hidden correlation" where the state determines the next number in a way that leaves massive gaps in the distribution, making it unsuitable for high-stakes statistical computing.
 
-``` Python
+```{python} 
 #| echo: true
 #| warning: false
 #| label: fig-spectral-test
