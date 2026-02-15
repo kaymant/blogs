@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/pseudorandom-num-generators/index.html",
       "/posts/monte-carlo-random-stick-break/index.html",
       "/posts/matrix-multiplication-benchmarking/index.html",
       "/posts/contour-plots/index.html"
