@@ -36,6 +36,16 @@ website:
       - text: "All posts"
         href: index.qmd
  
+  comments:
+    giscus:
+      repo: kaymant/blogs
+      repo-id: R_kgDORBjjTg # Provided by giscus.app
+      category: General
+      category-id: DIC_kwDORBjjTs4C2ifr # Provided by giscus.app
+      mapping: pathname
+      reactions-enabled: true
+      loading: lazy
+      theme: light # or dark
 
 # OPTIMIZATION FOR ML/MATH
 # This saves the results of your code. Quarto won't re-run your 

@@ -307,7 +307,7 @@ window.Quarto = {
 
 
 <p>Visualizing functions of two variables can provide deep insights into their behavior. In this post, we will explore how to create 3D surface plots and contour plots using Python’s Matplotlib library. We will use the function <span class="math inline">\(z =  x^2 + y^2\)</span> as our example.</p>
-<div id="cell-1" class="cell">
+<div id="cell-1" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
@@ -317,14 +317,14 @@ window.Quarto = {
 <p>Conisder a two dimensional function <span class="math inline">\(f(x,y)\)</span>. To visualize the function, its graph can be plotted as follows: For each point <span class="math inline">\((x,y)\)</span> on the <span class="math inline">\(xy\)</span>-plane, evaluate the value of <span class="math inline">\(f\)</span> and assign that value to a variable <span class="math inline">\(z\)</span>, so that <span class="math inline">\(z=f(x,y)\)</span>. In the 3D space, the graph <span class="math inline">\(z=f(x,y)\)</span> gives a surface. For example, consider the function <span class="math inline">\(f(x,y) = x^2+y^2\)</span>. Let’s plot the surface <span class="math display">\[
 z=x^2+y^2
 \]</span></p>
-<div id="cell-3" class="cell">
+<div id="cell-3" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(x,y):</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x<span class="op">**</span><span class="dv">2</span><span class="op">+</span>y<span class="op">**</span><span class="dv">2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="cell-4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="5b3dfe42-563f-4e8d-e9be-77d11a85fd1f">
+<div id="cell-4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="5b3dfe42-563f-4e8d-e9be-77d11a85fd1f" data-execution_count="3">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mpl_toolkits.mplot3d <span class="im">import</span> Axes3D</span>
@@ -353,14 +353,14 @@ z=x^2+y^2
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/cell-4-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="index_files/figure-html/cell-4-output-1.png" width="758" height="778" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
 <p>A <strong>level curve</strong> of the function <span class="math inline">\(f(x,y)\)</span> is a curve showing the set of points where the function has a constant value.</p>
 <p>In the above example, suppose we need the level curve where <span class="math inline">\(f(x,y) =10\)</span>. This will be obtained as the intersection of the surface <span class="math inline">\(z=x^2 + y^2\)</span> with the plane <span class="math inline">\(z=10\)</span>.</p>
-<div id="cell-6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="985524fc-f380-46dd-812b-fd42544321b8">
+<div id="cell-6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="985524fc-f380-46dd-812b-fd42544321b8" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Z<span class="op">=</span> f(X,Y)</span>
@@ -389,13 +389,13 @@ z=x^2+y^2
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/cell-5-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="index_files/figure-html/cell-5-output-1.png" width="758" height="778" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
 <p>If the level curves are drawn at regular intervals of the <span class="math inline">\(z\)</span> coordinates, we shall obtain many such circles whose centers are located on the <span class="math inline">\(z\)</span> axis and are equal spaced along it.</p>
-<div id="cell-8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="145da410-7182-45a2-d94e-094c31fbcd36">
+<div id="cell-8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="145da410-7182-45a2-d94e-094c31fbcd36" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a figure and a 3D axis</span></span>
@@ -422,13 +422,13 @@ z=x^2+y^2
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="index_files/figure-html/cell-6-output-1.png" width="758" height="778" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
 <p>If these level curves are projected back on the <span class="math inline">\(xy\)</span> plane, we get the contour plots. In our case, they will be circels. However, as the surface on which the level curves are present is curved, the contours projected on the <span class="math inline">\(xy\)</span> plane will not be equally spaced.</p>
-<div id="cell-10" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="7bf1c205-f474-4a5d-b263-cc8120edd693">
+<div id="cell-10" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:829}}" data-outputid="7bf1c205-f474-4a5d-b263-cc8120edd693" data-execution_count="6">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a figure and a 3D axis</span></span>
@@ -458,13 +458,13 @@ z=x^2+y^2
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="index_files/figure-html/cell-7-output-1.png" width="758" height="778" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
 <p>If you just see these contours on the <span class="math inline">\(xy\)</span> plane, they still give an idea as to how the function behaves.</p>
-<div id="cell-12" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:872}}" data-outputid="2ec22212-c940-43d3-b3a7-7c9bc42b6100">
+<div id="cell-12" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:872}}" data-outputid="2ec22212-c940-43d3-b3a7-7c9bc42b6100" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">10</span>))</span>
@@ -479,7 +479,7 @@ z=x^2+y^2
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="index_files/figure-html/cell-8-output-1.png" width="806" height="819" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -512,7 +512,7 @@ h = \sum_{i=1}^n x_{1i} x_{2i}, \quad g = - \sum_{i=1}^n x_{1i}y_i, \quad f = - 
 a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c = z
 \]</span> for some real constant <span class="math inline">\(z\)</span>. These equations, in general, represent <strong>conic sections</strong>. In fact, because of Cauchy-Schwarz inequality, <span class="math inline">\(h^2 -ab \le 0\)</span>, hence the conic section is an ellipse (if <span class="math inline">\(h^2 -ab &lt;0\)</span>) or a parabola (if <span class="math inline">\(h^2=ab\)</span>).</p>
 <p>Let us try to visualize SSE contours with a toy dataset.</p>
-<div id="cell-16" class="cell">
+<div id="cell-16" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Example dataset</span></span>
@@ -520,7 +520,7 @@ a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c = z
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>y_train <span class="op">=</span> <span class="dv">3</span> <span class="op">*</span> X_train[:, <span class="dv">0</span>] <span class="op">+</span> <span class="dv">2</span> <span class="op">*</span> X_train[:, <span class="dv">1</span>] <span class="op">+</span> np.random.randn(<span class="dv">100</span>)  <span class="co"># Linear relation with noise</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="cell-17" class="cell">
+<div id="cell-17" class="cell" data-execution_count="9">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> np.<span class="bu">sum</span>(X_train[:, <span class="dv">0</span>] <span class="op">**</span> <span class="dv">2</span>)</span>
@@ -531,7 +531,7 @@ a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c = z
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> np.<span class="bu">sum</span>(y_train <span class="op">**</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="cell-18" class="cell">
+<div id="cell-18" class="cell" data-execution_count="10">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> find_center(a,b,h,g,f,c):</span>
@@ -540,14 +540,14 @@ a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c = z
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> np.array([xc,yc])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="cell-19" class="cell">
+<div id="cell-19" class="cell" data-execution_count="11">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> SSE(w1, w2):</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a<span class="op">*</span> w1<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> b<span class="op">*</span> w2<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> <span class="dv">2</span><span class="op">*</span>h<span class="op">*</span>w1<span class="op">*</span>w2 <span class="op">+</span> <span class="dv">2</span><span class="op">*</span>g<span class="op">*</span>w1 <span class="op">+</span> <span class="dv">2</span><span class="op">*</span>f<span class="op">*</span>w2 <span class="op">+</span> c</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="cell-20" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:872}}" data-outputid="430afe2e-b9f7-4b8b-aec0-a1764d9a4138">
+<div id="cell-20" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:872}}" data-outputid="430afe2e-b9f7-4b8b-aec0-a1764d9a4138" data-execution_count="12">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create gridpoints centered about (xc, yc)</span></span>
@@ -577,7 +577,7 @@ a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c = z
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/cell-13-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="index_files/figure-html/cell-13-output-1.png" width="816" height="819" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -987,6 +987,35 @@ a w_1^2 + b w_2^2 + 2h w_1 w_2 + 2g w_1 + 2f w_2 + c = z
     }
   });
   </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "kaymant/blogs";
+    script.dataset.repoId = "R_kgDORBjjTg";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDORBjjTs4C2ifr";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "top";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
       <a href="../../posts/matrix-multiplication-benchmarking/index.html" class="pagination-link" aria-label="From Scratch: Optimizing Matrix Multiplication in C">

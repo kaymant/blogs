@@ -202,7 +202,7 @@ def generate_points(n, seed=42):
         vals.append(state / m)
     return vals
 
-# Generate 15,000 points for performance
+# Generate 15,000 points 
 data = generate_points(15000)
 x = data[:-2]
 y = data[1:-1]
@@ -216,11 +216,40 @@ fig = go.Figure(data=[go.Scatter3d(
 )])
 
 fig.update_layout(
-    title="Interactive 3D Spectral Test: Unix rand()",
+    title="Interactive 3D Spectral Test: RANDU",
     scene=dict(xaxis_title='x_i', yaxis_title='x_i+1', zaxis_title='x_i+2')
 )
 
 fig.show()
+```
+
+The same results can be obtained in R using the `plotly` package:
+```{r}
+#| echo: true
+#| warning: false
+#| label: fig-spectral-test-r
+#| fig-cap: "Interactive 3D Spectral Test for RANDU (a=65539, c=0, m=2^31) in R"
+
+library(plotly)
+
+# RANDU Parameters
+a <- 65539
+c <- 0
+m <- 2^31
+n <- 5000
+
+# Generate LCG data
+results <- numeric(n + 2)
+current <- 1
+for(i in 1:(n+2)) {
+  current <- (a * current + c) %% m
+  results[i] <- current / m
+}
+
+# Plotly renders as an interactive HTML widget
+plot_ly(x = results[1:n], y = results[2:(n+1)], z = results[3:(n+2)], 
+        type = 'scatter3d', mode = 'markers',
+        marker = list(size = 2, opacity = 0.5))
 ```
 
 In the next blog post, we will explore the multiplicative congruential generator in more detail, and see how to generate uniformly distributed random numbers in the interval [0,1] using LCGs, which can then be used to generate random numbers from other distributions.
