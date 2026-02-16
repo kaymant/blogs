@@ -5,6 +5,8 @@ image: "images/rand_hidden_corelations.png"
 author: "Anant Kumar"
 date: "2026-02-23"
 categories: [Randomness, Pseudorandomness, LCGs, Statistical Computing]
+bibliography: references.bib
+link-citations: true
 format:
   html:
     code-fold: true
@@ -35,7 +37,7 @@ However, it is not good enough to be *only* unbiased. For example, the sequence
 
 1 0 1 0 1 0 1 0 1 0 1 0 1 0 ...
 
-is u*nbiased*, but it is very *predictable*. So it cannot be said to be random.
+is *unbiased*, but it is very *predictable*. So it cannot be said to be random.
 
 -   The sequence should possess high information content ([Shannon Entropy](https://en.wikipedia.org/wiki/Information_content "Entropy of information as defined by Claude Shannon")). Unpredictable sequences have high entropy.
 
@@ -59,7 +61,7 @@ In this formula, $a$, $c$, $m$ are positive integer constants while $n=0$, $1$, 
 
 Let's first implement a basic LCG in Python:
 
-``` Python
+``` python
 class LCG:
     def __init__(self, seed, a=1, c=7, m=12):
         self.state = seed
@@ -79,13 +81,13 @@ print(f"Sequence: {sequence}")
 
 This produces
 
-``` Python
+``` python
 Sequence: [1, 8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6]
 ```
 
 Since this topic came up as part of a course in Statistical Computing which uses `R`, let's implement a variant in `R`:
 
-``` R
+``` r
 create_lcg <- function(seed, a, c, m) {
   current_state <- seed
 
@@ -103,20 +105,20 @@ print(results)
 
 This of course produces the same output:
 
-``` R
+``` r
 [1]  1  8  3 10  5  0  7  2  9  4 11  6
 ```
 
 Does the sequence look random? Notice that it prints all the integers from 0 to 11 in this sequence in some seemingly random order. But since the operations are modulo 12, a longer sequence will give repetitions:
 
-``` R
+``` r
 results <- replicate(20, prng2())
 print(results)
 ```
 
 This produces
 
-``` R
+``` r
 [1]  1  8  3 10  5  0  7  2  9  4 11  6  1  8  3 10  5  0  7  2
 ```
 
@@ -124,7 +126,7 @@ Notice that the sequence repeats, as expected. So this generator has a period th
 
 In the above example, the period is the maximum possible for $m=12$. But this only comes with suitable choice for $a$ and $c$. Consider another PRNG with $a=1$, $c=8$:
 
-``` R
+``` r
 prng3 <- create_lcg(seed=6, a=1, c=8, m=12)
 results <- replicate(12, prng3())
 print(results)
@@ -132,7 +134,7 @@ print(results)
 
 This gives:
 
-``` R
+``` r
 [1] 2 10 6 2 10 6 2 10 6 2 10 6
 ```
 
@@ -164,6 +166,16 @@ Since all the conditions are fulfilled, `prng1` generates a sequence which has a
 
 For `prng2`, since *c* = 8 and *m* = 12 are **not** relatively prime, the first condition breaks and the period is no longer the maximum possible value (it is in fact only 3).
 
+### Two Suitable Choices
+
+Two useful uniform random number generators of this type which have been found to be useful are
+
+-   $a=7^5=16\ 807$, $c=0$, $m = 2^{31}-1=2\ 147\ 483\ 647$
+
+-   $a=29\ 903\ 947$, $c=0$, $m=2^{31}-1=2\ 147\ 483\ 647$
+
+A comparative computational study of various random number generators can be found at the following citation [@ribeiro2005].
+
 ### A Cautionary Tale: Netscape Security Flaw (1995)
 
 In the early days of the Netscape Navigator browser, the implementation of the SSL (Secure Sockets Layer) protocol relied on a PRNG to generate "random" encryption keys. However, the developers used a seed derived from three easily discoverable system variables:
@@ -178,9 +190,11 @@ Researchers Ian Goldberg and David Wagner discovered that because these variable
 
 ### Another pitfall: Hidden Correlations
 
-In the following code, the specific parameters define **RANDU**, a notorious **multiplicative** congruential generator (since $c=0$ ) that was widely used on mainframe computers in the 1960s and 70s. As the Spectral test below demonstrates, it suffers from a massive defect: when used to generate coordinates in 3D space, all resulting points fall onto only **15 parallel planes**. This represents a severe "hidden correlation" where the state determines the next number in a way that leaves massive gaps in the distribution, making it unsuitable for high-stakes statistical computing.
+In the following code, the specific parameters define **RANDU**, a notorious **multiplicative** congruential generator (since $c=0$ ) that was widely used on mainframe computers in the 1960s and 70s. As the Spectral test below demonstrates, it suffers from a massive defect: when used to generate coordinates in 3D space, all resulting points fall onto only **15 parallel planes** [@hellekalek1998]. This represents a severe "hidden correlation" where the state determines the next number in a way that leaves massive gaps in the distribution, making it unsuitable for high-stakes statistical computing.
 
-```{python} 
+The following script generates 10,000 points where each point is defined by $(x_n, x_{n+1}, x_{n+2})$ and visualizes them using a 3D scatter plot.
+
+```{python}
 #| echo: true
 #| warning: false
 #| label: fig-spectral-test
@@ -202,8 +216,8 @@ def generate_points(n, seed=42):
         vals.append(state / m)
     return vals
 
-# Generate 15,000 points 
-data = generate_points(15000)
+# Generate 10,000 points 
+data = generate_points(10000)
 x = data[:-2]
 y = data[1:-1]
 z = data[2:]
@@ -220,10 +234,10 @@ fig.update_layout(
     scene=dict(xaxis_title='x_i', yaxis_title='x_i+1', zaxis_title='x_i+2')
 )
 
-fig.show()
 ```
 
 The same results can be obtained in R using the `plotly` package:
+
 ```{r}
 #| echo: true
 #| warning: false
@@ -236,7 +250,7 @@ library(plotly)
 a <- 65539
 c <- 0
 m <- 2^31
-n <- 5000
+n <- 10000
 
 # Generate LCG data
 results <- numeric(n + 2)
@@ -252,4 +266,4 @@ plot_ly(x = results[1:n], y = results[2:(n+1)], z = results[3:(n+2)],
         marker = list(size = 2, opacity = 0.5))
 ```
 
-In the next blog post, we will explore the multiplicative congruential generator in more detail, and see how to generate uniformly distributed random numbers in the interval [0,1] using LCGs, which can then be used to generate random numbers from other distributions.
+In the next blog post, we will explore the multiplicative congruential generator in more detail, and see how to generate uniformly distributed random numbers in the interval \[0,1\] using LCGs, which can then be used to generate random numbers from other distributions.

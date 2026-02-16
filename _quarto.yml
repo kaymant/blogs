@@ -57,6 +57,5 @@ format:
   html:
     theme: cosmo
     css: styles.css
-    # I removed "- brand" unless you have a specific custom theme file.
-    # If "brand" is not a standard theme or a file you created, it will cause an error.
     toc: true
+    bibliography: references.bib
