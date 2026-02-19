@@ -44,7 +44,7 @@ install.packages("xtable")
 
 An `.Rnw` file looks like a regular `.tex` file but with a special power: **Code Chunks**. These code chunks are the actual R codes. Here is a minimum working example of what an `.Rnw` file looks like:
 
-``` Rnw
+``` tex
 \documentclass{article}
 \usepackage{graphicx}
 \usepackage{hyperref}
@@ -79,7 +79,7 @@ The mean of our generated data is \Sexpr{mean_x}.
 
 Chunks are where the magic happens. They start with `<<options>>=` and end with `@`.
 
-```         
+``` tex
 <<my-plot, echo=FALSE>>=
 plot(x)
 @
@@ -89,7 +89,7 @@ plot(x)
 
 This is actually a very useful feature. Instead of typing "The value is 5.32" and having to update it later, you write:
 
-```         
+``` tex
 The value is \Sexpr{mean(x)}.
 ```
 
