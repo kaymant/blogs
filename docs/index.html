@@ -240,6 +240,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./posts/integrating-R-and-latex/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Integrating R with LaTeX using <code>knitr</code></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./posts/pseudorandom-num-generators/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Pseudorandom Number Generators: Linear Congruential Generators</span></a>
   </div>
@@ -261,7 +267,7 @@ window.Quarto = {
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
         
-    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(4)</span></div><div class="category" data-category="Qw==">C <span class="quarto-category-count">(1)</span></div><div class="category" data-category="SFBD">HPC <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TENHcw==">LCGs <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TGluZWFyJTIwQWxnZWJyYQ==">Linear Algebra <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TWF0aGVtYXRpY3M=">Mathematics <span class="quarto-category-count">(2)</span></div><div class="category" data-category="T3B0aW1pemF0aW9u">Optimization <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHJvYmFiaWxpdHk=">Probability <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHNldWRvcmFuZG9tbmVzcw==">Pseudorandomness <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHl0aG9u">Python <span class="quarto-category-count">(2)</span></div><div class="category" data-category="UmFuZG9tbmVzcw==">Randomness <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U3RhdGlzdGljYWwlMjBDb21wdXRpbmc=">Statistical Computing <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VmlzdWFsaXphdGlvbg==">Visualization <span class="quarto-category-count">(1)</span></div></div></div>
+    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(5)</span></div><div class="category" data-category="Qw==">C <span class="quarto-category-count">(1)</span></div><div class="category" data-category="RGF0YSUyMFNjaWVuY2U=">Data Science <span class="quarto-category-count">(1)</span></div><div class="category" data-category="SFBD">HPC <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TGFUZVg=">LaTeX <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TENHcw==">LCGs <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TGluZWFyJTIwQWxnZWJyYQ==">Linear Algebra <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TWF0aGVtYXRpY3M=">Mathematics <span class="quarto-category-count">(2)</span></div><div class="category" data-category="T3B0aW1pemF0aW9u">Optimization <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHJvYmFiaWxpdHk=">Probability <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHNldWRvcmFuZG9tbmVzcw==">Pseudorandomness <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHl0aG9u">Python <span class="quarto-category-count">(2)</span></div><div class="category" data-category="Ug==">R <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UmFuZG9tbmVzcw==">Randomness <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U3RhdGlzdGljYWwlMjBDb21wdXRpbmc=">Statistical Computing <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U3RhdGlzdGljcw==">Statistics <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VmlzdWFsaXphdGlvbg==">Visualization <span class="quarto-category-count">(1)</span></div></div></div>
 <!-- main -->
 <main class="content quarto-banner-title-block column-body" id="quarto-document-content">
 
@@ -275,7 +281,7 @@ window.Quarto = {
 
 <div class="quarto-listing quarto-listing-container-default" id="listing-listing">
 <div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="UmFuZG9tbmVzcyUyQ1BzZXVkb3JhbmRvbW5lc3MlMkNMQ0dzJTJDU3RhdGlzdGljYWwlMjBDb21wdXRpbmc=" data-listing-date-sort="1771785000000" data-listing-file-modified-sort="1771265190472" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="10" data-listing-word-count-sort="1834">
+<div class="quarto-post image-right" data-index="0" data-categories="UmFuZG9tbmVzcyUyQ1BzZXVkb3JhbmRvbW5lc3MlMkNMQ0dzJTJDU3RhdGlzdGljYWwlMjBDb21wdXRpbmc=" data-listing-date-sort="1771525800000" data-listing-file-modified-sort="1771524570892" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="10" data-listing-word-count-sort="1825">
 <div class="thumbnail"><a href="./posts/pseudorandom-num-generators/index.html" class="no-external">
 
 <img loading="lazy" src="./posts/pseudorandom-num-generators/images/rand_hidden_corelations.png" class="thumbnail-image">
@@ -303,7 +309,7 @@ window.Quarto = {
 <div class="metadata">
 <a href="./posts/pseudorandom-num-generators/index.html" class="no-external">
 <div class="listing-date">
-Feb 23, 2026
+Feb 20, 2026
 </div>
 <div class="listing-author">
 Anant Kumar
@@ -311,7 +317,43 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="1" data-categories="TWF0aGVtYXRpY3MlMkNQcm9iYWJpbGl0eSUyQ1B5dGhvbg==" data-listing-date-sort="1770748200000" data-listing-file-modified-sort="1770834058162" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="5" data-listing-word-count-sort="806">
+<div class="quarto-post image-right" data-index="1" data-categories="UiUyQ0xhVGVYJTJDU3RhdGlzdGljcyUyQ0RhdGElMjBTY2llbmNl" data-listing-date-sort="1771439400000" data-listing-file-modified-sort="1771524497547" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="762">
+<div class="thumbnail"><a href="./posts/integrating-R-and-latex/index.html" class="no-external">
+
+<img loading="lazy" src="./posts/integrating-R-and-latex/images/r_latex.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./posts/integrating-R-and-latex/index.html" class="no-external">Integrating R with LaTeX using <code>knitr</code></a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Ug=='); return false;">R</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('TGFUZVg='); return false;">LaTeX</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('U3RhdGlzdGljcw=='); return false;">Statistics</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('RGF0YSUyMFNjaWVuY2U='); return false;">Data Science</div>
+
+</div>
+<div class="delink listing-description"><a href="./posts/integrating-R-and-latex/index.html" class="no-external">
+<p>A comprehensive guide to integrating R code and LaTeX documents using the <code>knitr</code> package, enabling dynamic report generation and reproducible research.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./posts/integrating-R-and-latex/index.html" class="no-external">
+<div class="listing-date">
+Feb 19, 2026
+</div>
+<div class="listing-author">
+Anant Kumar
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="2" data-categories="TWF0aGVtYXRpY3MlMkNQcm9iYWJpbGl0eSUyQ1B5dGhvbg==" data-listing-date-sort="1770748200000" data-listing-file-modified-sort="1770834058162" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="5" data-listing-word-count-sort="806">
 <div class="thumbnail"><a href="./posts/monte-carlo-random-stick-break/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/monte-carlo-random-stick-break/images/sample_space.png" alt="Sample space"  class="thumbnail-image card-img"/></p>
@@ -345,7 +387,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="2" data-categories="QyUyQ0hQQyUyQ0xpbmVhciUyMEFsZ2VicmElMkNPcHRpbWl6YXRpb24=" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1770827612624" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="7" data-listing-word-count-sort="1327">
+<div class="quarto-post image-right" data-index="3" data-categories="QyUyQ0hQQyUyQ0xpbmVhciUyMEFsZ2VicmElMkNPcHRpbWl6YXRpb24=" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1770827612624" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="7" data-listing-word-count-sort="1327">
 <div class="thumbnail"><a href="./posts/matrix-multiplication-benchmarking/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/matrix-multiplication-benchmarking/images/matmul_performance.png" alt="Comparison of various methods of Matrix Multiplication"  class="thumbnail-image card-img"/></p>
@@ -381,7 +423,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="3" data-categories="TWF0aGVtYXRpY3MlMkNQeXRob24lMkNWaXN1YWxpemF0aW9u" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1771242110753" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="627">
+<div class="quarto-post image-right" data-index="4" data-categories="TWF0aGVtYXRpY3MlMkNQeXRob24lMkNWaXN1YWxpemF0aW9u" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1771242110753" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="627">
 <div class="thumbnail"><a href="./posts/contour-plots/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/contour-plots/index_files/figure-html/cell-4-output-1.png"  class="thumbnail-image card-img"/></p>

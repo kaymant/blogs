@@ -1,0 +1,146 @@
+---
+title: "Integrating R with LaTeX using `knitr`"
+description: "A comprehensive guide to integrating R code and LaTeX documents using the `knitr` package, enabling dynamic report generation and reproducible research."
+image: "images/r_latex.png"
+author: "Anant Kumar"
+date: "2026-02-19"
+categories: [R, LaTeX, Statistics, Data Science]
+link-citations: true
+format:
+  html:
+    code-fold: true
+    toc: true
+---
+
+## Introduction
+
+I had heard about R but never really got into it until I started with a course on Statistical Computing. I needed to create reports that required me to show the output of R codes. I have been working in the type setting system LaTex and my instinct was to put the screenshot as an image in the source file. Soon I was caught in a cycle: You run a simulation in R, copy the graph into your LaTeX document, and then realize you made a small error in the initial parameters. You fix the code, re-run it, copy the graph again and so on. That's when I discovered `knitr`, a powerful package in R that allows you to integrate R code with LaTeX documents seamlessly.
+
+In this post, I will share my experience and provide a comprehensive guide on how to use `knitr` to create dynamic reports that combine R code and LaTeX. This approach not only saves time but also ensures that your reports are reproducible and up-to-date with the latest data and analyses.
+
+## What is `knitr`?
+
+`knitr` is an R package that allows you to embed R code chunks directly into a document. While many of us use it with Markdown (like in this blog!), it was originally designed to supercharge LaTex.
+
+Instead of writing a `.tex` file, we write an `.Rnw` (R NoWeb) file. When we compile it, `knitr` executes the R code, grabs the results (plots, tables, numbers), and produces a standard `.tex` file that is then compiled into a PDF.
+
+## Installation & Setup
+
+Before we start, ensure that you have a working LaTex distribution (like TexLive or MikTex) and R installed. My working machine is a desktop with Ubuntu 24.04 LTS version. I have TexLive distribution and all the demos pertain to this setup. Yours might be different so set up accordingly.
+
+Open your R console (in case, you are installing it system wide, you might have to start your R console using `sudo R)`or RStudio and install the `knitr` package:
+
+``` R
+install.packages("knitr")
+```
+
+If you want to create tables that play nicely with LaTex, you might also want to install `xtable`:
+
+``` R
+install.packages("xtable")
+```
+
+## Creating `.Rnw` file
+
+An `.Rnw` file looks like a regular `.tex` file but with a special power: **Code Chunks**. These code chunks are the actual R codes. Here is a minimum working example of what an `.Rnw` file looks like:
+
+``` Rnw
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{Analysis of Randomness}
+\author{Anant Kumar}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This is a document generated using \textbf{knitr}. 
+Below, we generate some random numbers.
+
+% This is a code chunk
+<<chunk-label, echo=TRUE, fig.width=6, fig.height=4>>=
+# R code goes here
+set.seed(123)
+x <- rnorm(100)
+mean_x <- mean(x)
+@
+
+The mean of our generated data is \Sexpr{mean_x}.
+
+\end{document}
+```
+
+### Syntax Breakdown
+
+#### 1. The Code Chunk
+
+Chunks are where the magic happens. They start with `<<options>>=` and end with `@`.
+
+```         
+<<my-plot, echo=FALSE>>=
+plot(x)
+@
+```
+
+#### 2. Inline R code (`\Sexpr`)
+
+This is actually a very useful feature. Instead of typing "The value is 5.32" and having to update it later, you write:
+
+```         
+The value is \Sexpr{mean(x)}.
+```
+
+When compiled, `knitr` calculates the mean and inserts the number directly into the sentence.
+
+## Customizing Chunks
+
+`knitr` provides granular control over the output that it produces. Here are the most common options you will use in `<<>>=` header:
+
+-   **`echo=FALSE`**: Hides the code but shows the results (if you just wanted to report the output).
+
+-   **`eval=FALSE`**: Shows the code but doesn't run it (useful for tutorials).
+
+-   **`include=FALSE`**: Runs the code but hides everything (good for loading packages or setting up data).
+
+-   **`results='asis'`**: Critical for tables. It tells LaTeX to treat the R output as raw LaTeX text.
+
+-   **`fig.cap="My Caption"`**: Automatically adds a figure caption.
+
+## Generating Tables
+
+In standard LaTeX, creating tables is tedious. With R and the `xtable` package, it becomes dynamic.
+
+``` tex
+<<table-example, results='asis', echo=FALSE>>=
+library(xtable)
+data(iris)
+# Create a LaTeX table for the first 5 rows of the iris dataset
+print(xtable(head(iris), caption="Iris Data Preview"))
+@
+```
+
+Because we used `results='asis'`, R outputs the raw LaTeX code for the table (`\begin{table} ... \end{table}`), which is then rendered perfectly in the PDF.
+
+## Compiling the Document
+
+Once done editing, go to the R console (ensuring that you start it in the same directory in which the document is present) and run the following R command:
+
+``` R
+library(knitr)
+knit2pdf("your_document.Rnw")
+```
+
+This function:
+
+1.  **Knits**: Converts `mydocument.Rnw` $\rightarrow$ `mydocument.tex`.
+
+2.  **Compiles**: Runs `pdflatex` on `mydocument.tex` $\rightarrow$ `mydocument.pdf`.
+
+## Conclusion
+
+Integrating R into LaTeX has saved me countless hours when preparing documents that contain R codes. It ensures that if I change a dataset or a parameter, every single graph, table, and inline number in my document updates automatically.
+
+Give it a try for your next project report or assignment!
