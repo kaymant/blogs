@@ -9,7 +9,7 @@ bibliography: references.bib
 link-citations: true
 format:
   html:
-    code-fold: true
+    code-fold: false
     toc: true
 ---
 

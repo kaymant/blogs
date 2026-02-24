@@ -5,13 +5,12 @@ project:
     - CNAME
 
 website:
-  title: "Anant's Blog" # Changed from "blogs" to be more descriptive
-  description: "A blog about Mathematics, Machine Learning, and EdTech."
+  title: "Anant's Blog" 
+  description: "A blog about Mathematics, Physics, Machine Learning, and EdTech."
   page-navigation: true
   
-  # CRITICAL: Change this to your actual GitHub Pages URL 
-  # (e.g., https://kaymant.github.io/repo-name)
   site-url: https://anantkumar.online
+  favicon: favicon/favicon.ico
   
   navbar:
     right:

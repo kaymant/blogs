@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/generating-other-dist/index.html",
       "/posts/pseudorandom-num-generators/index.html",
       "/posts/integrating-R-and-latex/index.html",
       "/posts/monte-carlo-random-stick-break/index.html",

@@ -30,13 +30,13 @@ Before we start, ensure that you have a working LaTex distribution (like TexLive
 
 Open your R console (in case, you are installing it system wide, you might have to start your R console using `sudo R)`or RStudio and install the `knitr` package:
 
-``` R
+``` r
 install.packages("knitr")
 ```
 
 If you want to create tables that play nicely with LaTex, you might also want to install `xtable`:
 
-``` R
+``` r
 install.packages("xtable")
 ```
 
@@ -128,7 +128,7 @@ Because we used `results='asis'`, R outputs the raw LaTeX code for the table (`\
 
 Once done editing, go to the R console (ensuring that you start it in the same directory in which the document is present) and run the following R command:
 
-``` R
+``` r
 library(knitr)
 knit2pdf("your_document.Rnw")
 ```

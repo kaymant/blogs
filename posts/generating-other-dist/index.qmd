@@ -1,0 +1,129 @@
+---
+title: "Generating Other Distributions from Uniform Random Variables"
+description: "In this post, we explore how to generate random variables from various distributions using uniform random variables. We will cover techniques such as the Inverse Transform Method, Box-Muller Transform, and Acceptance-Rejection Method, along with their applications and implementations in Python and R"
+image: "images/uniform_normal_exp.png"
+author: "Anant Kumar"
+date: "2026-02-21"
+categories: [Uniform Distribution, Pseudorandomness, LCGs, Statistical Computing, Python, R]
+format:
+  html:
+    code-fold: false
+    toc: true
+---
+
+## Introduction
+
+In one of my [previous post](../pseudorandom-num-generators/index.qmd), we discussed how to generate random variables using Linear Congruential Generators (LCGs). The LCGs usually generate uniform random variables (as we shall see shortly), but in many applications, we need to generate random variables from other distributions, such as normal, exponential, or Poisson distributions. In this post, we will explore various techniques to generate random variables from different distributions using uniform random variables.
+
+## Uniform Random Variables
+
+Before we dive into generating other distributions, let's briefly review how to generate uniform random variables using LCGs. An LCG is defined by the recurrence relation:
+
+$$
+x_{n+1} = (ax_n+c)\text{ mod } m, \quad n=0, 1, 2, 3, \ldots
+$$
+
+One of the good set of choices for $a$, $c$, and $m$ is to set
+
+$$
+a=7^5, \quad c=0,\quad m=2^{31}-1 
+$$
+
+Let us implement this basic LCG in Python first:
+
+```{python}
+class LCG:
+    def __init__(self, seed, a=7**5, c=0, m=2**31 - 1):
+        self.state = seed
+        self.a = a
+        self.c = c
+        self.m = m
+
+    def next(self):
+        # The LCG formula: x_{n+1} = (ax_n + c) % m
+        self.state = (self.a * self.state + self.c) % self.m
+        return self.state/self.m  # Return a value in the range [0, 1]
+
+prng = LCG(seed=42)
+generate_seq = [prng.next() for i in range(10)]
+print(generate_seq)
+```
+
+This will generate a sequence of 10 random numbers uniformly distributed in the range [0, 1]. We can generate a larger sequence and visualize it to check for uniformity and randomness. But let's save that for the R implementation, which is more concise for this purpose.
+
+Implement the LCG in R:
+
+```{r}
+prngr <- function(seed, a, c = 0, m, n) {
+    current_state <- seed
+    seq = numeric(n)
+    
+    for (i in 1:n) {
+        current_state <- (a * current_state + c) %% m
+        seq[i] <- current_state/m
+    }
+    return(seq)
+}
+
+rand_seq <- prngr(seed=42, a=7**5, m = 2^31 - 1, n = 10000)
+print(rand_seq[1:10])
+```
+
+The histogram shows that the generated values have pretty uniform distribution while the time series plot shows that there are no obvious patterns in the generated sequence, which is a good sign for a pseudorandom number generator.
+
+```{r}
+hist(rand_seq,  main = "Histogram of Generated Uniform Random Variables", xlab = "Value", ylab = "Frequency", col = "lightblue")
+plot(rand_seq[1:1000], type = "l", main = "Time Series of Generated Uniform Random Variables", xlab = "Index", ylab = "Value")
+```
+
+## Adjusting the Range
+
+Let's consider a version of the LCG which generates integer values in the range 0 to $m$ instead of floating-point numbers in the range [0, 1]. This can be achieved by simply returning the state without dividing by $m$:
+
+```{r}
+prngrInt <- function(seed, a, c = 0, m, n) {
+    current_state <- seed
+    seq = numeric(n)
+    
+    for (i in 1:n) {
+        current_state <- (a * current_state + c) %% m
+        seq[i] <- current_state
+    }
+    return(seq)
+}
+
+rand_int <- prngrInt(seed=42, a=7**5, m = 2^31 - 1, n = 10000)
+print(rand_int[1:10])
+```
+But we want to play a game of dice, which means we want to generate random integers between 1 and 6. How do we take an integer in the range 0 to $m$ and convert it to an integer in the range 1 to 6? We can use the modulo operator to achieve this:
+
+```{r}
+rand_dice <- (rand_int %% 6) + 1
+print(rand_dice[1:10])
+```
+This will give us random integers between 1 and 6, simulating the roll of a die. The histogram of the generated dice rolls should show that each number from 1 to 6 appears with roughly equal frequency, indicating that our method is working correctly.  
+
+```{r}
+hist(rand_dice, breaks = seq(0.5, 6.5, by = 1), main = "Histogram of Simulated Dice Rolls", xlab = "Die Value", ylab = "Frequency", col = "lightblue")
+```
+
+
+### U(0,1) to U(a,b)
+
+In general, we can use the formula generating random numbers between 0 and 1 to generate random numbers between $a$ and $b$ as follows:
+$$
+X = a + (b-a)U
+$$
+Where $U$ is a random variable uniformly distributed in the range [0, 1]. For example, to generate random numbers between 5 and 10, we can use the following code:
+
+```{r}
+a <- 5
+b <- 10
+rand_uniform_ab <- a + (b - a) * rand_seq
+print(rand_uniform_ab[1:10])
+```
+This will give us random numbers uniformly distributed between 5 and 10. The histogram of these numbers should show a uniform distribution between 5 and 10.    
+
+```{r}
+hist(rand_uniform_ab, main = "Histogram of Uniform Random Variables between 5 and 10", xlab = "Value", ylab = "Frequency", col = "lightblue")
+```
