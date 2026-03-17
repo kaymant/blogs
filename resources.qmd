@@ -6,7 +6,7 @@ Welcome to the resources page. Here you will find interactive simulations, visua
 
 ## Physics Simulations
 
-* [**Electric Field Lines Visualization**](/simulations/electric-field/index.html)  
+* [**Electric Field Lines Visualization**](/simulations/field_lines/index.html)  
     An interactive 3D simulation to explore electric fields and point charges. 
 
 *(More tools and booklets will be added here soon.)*
