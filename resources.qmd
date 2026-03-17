@@ -1,0 +1,12 @@
+---
+title: "Resources & Interactive Tools"
+---
+
+Welcome to the resources page. Here you will find interactive simulations, visual tools, and materials I use for teaching Physics and Mathematics.
+
+## Physics Simulations
+
+* [**Electric Field Lines Visualization**](/simulations/electric-field/index.html)  
+    An interactive 3D simulation to explore electric fields and point charges. 
+
+*(More tools and booklets will be added here soon.)*
