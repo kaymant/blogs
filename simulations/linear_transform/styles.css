@@ -1,0 +1,134 @@
+/* ----------------------------------- */
+    /* GLOBAL & STRUCTURE */
+    /* ----------------------------------- */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: row; /* Default: controls on left, canvas on right */
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f4f6f8;
+    }
+
+    /* Make the layout vertical on small screens (mobile) */
+    @media (max-width: 900px) {
+      body {
+        flex-direction: column;
+      }
+      #controls {
+        width: 100% !important; /* Take full width on mobile */
+      }
+    }
+
+    /* ----------------------------------- */
+    /* CONTROLS PANEL */
+    /* ----------------------------------- */
+    #controls {
+      width: 340px;
+      min-width: 300px;
+      background-color: #fff;
+      border-right: 1px solid #ddd;
+      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.05);
+      padding: 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow-y: auto; /* Allow scrolling if controls are too long */
+    }
+
+    h2, h3 {
+      margin-top: 15px;
+      color: #333;
+    }
+    
+    .matrix-vector-section {
+      display: flex;
+      align-items: flex-start;
+      gap: 25px;
+      margin-top: 10px;
+    }
+
+    .matrix-container {
+      display: inline-grid;
+      grid-template-columns: repeat(2, 70px);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    
+    .vector-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    input[type="number"] {
+      width: 70px;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+      text-align: right;
+    }
+
+    /* ----------------------------------- */
+    /* BUTTONS & INFO */
+    /* ----------------------------------- */
+    #buttons-container {
+      display: flex;
+      flex-wrap: wrap; 
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 15px;
+      border: none;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background-color 0.3s;
+      min-width: 100px;
+    }
+
+    #animate-btn { background-color: #007bff; }
+    #animate-btn:hover { background-color: #0056b3; }
+    #eigen-btn { background-color: #28a745; }
+    #eigen-btn:hover { background-color: #1e7e34; }
+    #reset-btn { background-color: #6c757d; }
+    #reset-btn:hover { background-color: #5a6268; }
+    #full-reset-btn { background-color: #dc3545; }
+    #full-reset-btn:hover { background-color: #c82333; }
+
+    #eigen-info {
+      background-color: #eef7ff;
+      border: 1px solid #b3d9ff;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 20px;
+      font-size: 0.9em;
+      line-height: 1.4;
+    }
+
+    /* ----------------------------------- */
+    /* CANVAS */
+    /* ----------------------------------- */
+    #canvas-container {
+      flex-grow: 1; /* Allow container to take remaining space */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      min-width: 0; /* Necessary for flex item resizing */
+    }
+
+    canvas {
+      background-color: #fff;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }

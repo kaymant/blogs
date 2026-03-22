@@ -4,9 +4,13 @@ title: "Resources & Interactive Tools"
 
 Welcome to the resources page. Here you will find interactive simulations, visual tools, and materials I use for teaching Physics and Mathematics.
 
-## Physics Simulations
+## Simulations / Animations
 
 * [**Electric Field Lines Visualization**](/simulations/field_lines/index.html)  
     An interactive 3D simulation to explore electric fields and point charges. 
+* [**How Linear Transformations transform Space**](/simulations/linear_transform/index.html) 
+    See how a linear transformation rotates and stretches the 2-dimensional space in real time and how the eigen-directions won't budge.
+    
+---
 
 *(More tools and booklets will be added here soon.)*
