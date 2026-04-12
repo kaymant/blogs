@@ -320,6 +320,11 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#u01-to-uab" id="toc-u01-to-uab" class="nav-link" data-scroll-target="#u01-to-uab">U(0,1) to U(a,b)</a></li>
   </ul></li>
+  <li><a href="#generating-other-distributions" id="toc-generating-other-distributions" class="nav-link" data-scroll-target="#generating-other-distributions">Generating Other Distributions</a></li>
+  <li><a href="#inverse-transform-method" id="toc-inverse-transform-method" class="nav-link" data-scroll-target="#inverse-transform-method">Inverse Transform Method</a></li>
+  <li><a href="#the-acceptance-rejection-method" id="toc-the-acceptance-rejection-method" class="nav-link" data-scroll-target="#the-acceptance-rejection-method">The Acceptance-Rejection Method</a></li>
+  <li><a href="#the-box-muller-transform" id="toc-the-box-muller-transform" class="nav-link" data-scroll-target="#the-box-muller-transform">The Box-Muller Transform</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
   </ul>
 </nav>
     </div>
@@ -365,7 +370,7 @@ a=7^5, \quad c=0,\quad m=2^{31}-1
 <pre><code>[0.00032870750889587566, 0.5245871020129822, 0.7354235321913956, 0.26330554078487006, 0.37622397131110724, 0.19628582577979464, 0.9758738810084173, 0.512318108469396, 0.5304490451377114, 0.2571016295147602]</code></pre>
 </div>
 </div>
-<p>This will generate a sequence of 10 random numbers uniformly distributed in the range [0, 1]. We can generate a larger sequence and visualize it to check for uniformity and randomness. But let’s save that for the R implementation, which is more concise for this purpose.</p>
+<p>This will generate a sequence of 10 random numbers uniformly distributed in the range [0, 1]. We can generate a larger sequence and visualize it to check for uniformity and randomness. But let’s save that for the R implementation, which is more concise for this purpose. In fact, the rest of the code in this post will be implemented in R, so let’s switch to R now.</p>
 <p>Implement the LCG in R:</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>prngr <span class="ot">&lt;-</span> <span class="cf">function</span>(seed, a, <span class="at">c =</span> <span class="dv">0</span>, m, n) {</span>
@@ -473,9 +478,133 @@ X = a + (b-a)U
 </div>
 </div>
 </div>
-
-
 </section>
+</section>
+<section id="generating-other-distributions" class="level2">
+<h2 class="anchored" data-anchor-id="generating-other-distributions">Generating Other Distributions</h2>
+<p>Now that we have a good understanding of how to generate uniform random variables, we can use them to generate random variables from other distributions. In the remainder of this post, we will explore some common techniques for doing this, including the Inverse Transform Method, Acceptance-Rejection Method, and the Box-Muller Transform.</p>
+</section>
+<section id="inverse-transform-method" class="level2">
+<h2 class="anchored" data-anchor-id="inverse-transform-method">Inverse Transform Method</h2>
+<p>The Inverse Transform Method is one of the most straightforward ways to generate random variables from a continuous distribution, provided that the cumulative distribution function (CDF) is invertible.</p>
+<p>Let <span class="math inline">\(U\)</span> be a uniform random variable on the interval (0, 1). For any continuous probability distribution with CDF <span class="math inline">\(F\)</span>, the random variable <span class="math inline">\(X\)</span> defined by: <span class="math display">\[
+X = F^{-1}(U)
+\]</span></p>
+<p>has the distribution <span class="math inline">\(F\)</span>. Let’s apply this to the exponential distribution. The CDF of an exponential distribution with rate parameter <span class="math inline">\(\lambda\)</span> is <span class="math display">\[
+F(x) = 1 - e^{-\lambda x}
+\]</span></p>
+<p>Setting <span class="math inline">\(U = 1 - e^{-\lambda x}\)</span> and solving for <span class="math inline">\(x\)</span> gives: <span class="math display">\[
+x = -\frac{1}{\lambda} \ln(1 - U)
+\]</span> Since <span class="math inline">\(U\)</span> is uniformly distributed on (0, 1), <span class="math inline">\(1 - U\)</span> is also uniformly distributed on (0, 1). Thus, we can simplify this to <span class="math display">\[
+x = -\frac{1}{\lambda} \ln(U)
+\]</span></p>
+<p>Here is how we can implement this in R using our previously generated uniform sequence:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>lambda <span class="ot">&lt;-</span> <span class="dv">2</span>  <span class="co"># Rate parameter</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Using rand_seq from our LCG</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>rand_exp <span class="ot">&lt;-</span> <span class="sc">-</span>(<span class="dv">1</span> <span class="sc">/</span> lambda) <span class="sc">*</span> <span class="fu">log</span>(rand_seq)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(rand_exp, <span class="at">breaks =</span> <span class="dv">50</span>, <span class="at">freq =</span> <span class="cn">FALSE</span>, </span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Generated Exponential Distribution"</span>, </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Value"</span>, <span class="at">col =</span> <span class="st">"lightgreen"</span>)</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Overlay the theoretical density curve</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dexp</span>(x, <span class="at">rate =</span> lambda), <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="the-acceptance-rejection-method" class="level2">
+<h2 class="anchored" data-anchor-id="the-acceptance-rejection-method">The Acceptance-Rejection Method</h2>
+<p>Sometimes the inverse CDF is mathematically difficult or impossible to compute explicitly. In these cases, the Acceptance-Rejection Method is incredibly useful.Suppose we want to simulate a continuous random variable with a target probability density function (PDF) <span class="math inline">\(f(x)\)</span>. We choose a “proposal” density <span class="math inline">\(g(x)\)</span> which we already know how to simulate, and we find a constant <span class="math inline">\(c\)</span> such that <span class="math inline">\(f(x) \leq c \cdot g(x)\)</span> for all <span class="math inline">\(x\)</span>.</p>
+<p>The algorithm works as follows:</p>
+<ol type="1">
+<li>Generate <span class="math inline">\(Y\)</span> having density <span class="math inline">\(g\)</span>.</li>
+<li>Generate a uniform random number <span class="math inline">\(U \sim U(0,1)\)</span>.</li>
+<li>If <span class="math inline">\(U \leq \dfrac{f(Y)}{c \, g(Y)}\)</span>, accept <span class="math inline">\(X = Y\)</span>. Otherwise, reject <span class="math inline">\(Y\)</span> and repeat.</li>
+</ol>
+<p>Let’s simulate a Beta(2, 2) distribution. The PDF is</p>
+<p><span class="math display">\[
+f(x) = 6x(1-x),  \quad 0 \leq x \leq 1
+\]</span></p>
+<p>Since the domain is [0, 1], we can use the uniform distribution as our proposal distribution, meaning <span class="math inline">\(g(x) = 1\)</span>. The maximum value of <span class="math inline">\(f(x)\)</span> occurs at <span class="math inline">\(x = 0.5\)</span>, which gives <span class="math inline">\(f(0.5) = 1.5\)</span>. Therefore, we can set our bounding constant <span class="math inline">\(c = 1.5\)</span>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>n_samples <span class="ot">&lt;-</span> <span class="dv">10000</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>accepted_samples <span class="ot">&lt;-</span> <span class="fu">numeric</span>(<span class="dv">0</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>c_val <span class="ot">&lt;-</span> <span class="fl">1.5</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># We will generate pairs of uniforms to act as Y and U</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n_samples) {</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># In practice, you'd pull from your LCG sequence. </span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Using runif here for clarity in the loop structure.</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  Y <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1</span>) </span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  U <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1</span>)</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  f_Y <span class="ot">&lt;-</span> <span class="dv">6</span> <span class="sc">*</span> Y <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> Y)</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  g_Y <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (U <span class="sc">&lt;=</span> f_Y <span class="sc">/</span> (c_val <span class="sc">*</span> g_Y)) {</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    accepted_samples <span class="ot">&lt;-</span> <span class="fu">c</span>(accepted_samples, Y)</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(accepted_samples, <span class="at">breaks =</span> <span class="dv">40</span>, <span class="at">freq =</span> <span class="cn">FALSE</span>, </span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Generated Beta(2,2) via Acceptance-Rejection"</span>, </span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Value"</span>, <span class="at">col =</span> <span class="st">"lightpink"</span>)</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dbeta</span>(x, <span class="dv">2</span>, <span class="dv">2</span>), <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"darkred"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="the-box-muller-transform" class="level2">
+<h2 class="anchored" data-anchor-id="the-box-muller-transform">The Box-Muller Transform</h2>
+<p>The Box-Muller transform is an elegant mathematical trick designed specifically to generate independent, standard, normally distributed random variables.</p>
+<p>Given two independent uniform random variables <span class="math inline">\(U_1\)</span> and <span class="math inline">\(U_2\)</span> on the interval (0, 1), the Box-Muller transform generates two independent standard normal variables <span class="math inline">\(Z_1\)</span> and <span class="math inline">\(Z_2\)</span>:</p>
+<p><span class="math display">\[
+Z_1 = \sqrt{-2 \ln U_1} \cos(2\pi U_2)
+\]</span> <span class="math display">\[
+Z_2 = \sqrt{-2 \ln U_1} \sin(2\pi U_2)
+\]</span></p>
+<p>We can split our rand_seq of 10,000 uniform variables into two sets of 5,000 to represent <span class="math inline">\(U_1\)</span> and <span class="math inline">\(U_2\)</span>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Split the sequence in half</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>U1 <span class="ot">&lt;-</span> rand_seq[<span class="dv">1</span><span class="sc">:</span><span class="dv">5000</span>]</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>U2 <span class="ot">&lt;-</span> rand_seq[<span class="dv">5001</span><span class="sc">:</span><span class="dv">10000</span>]</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the transform</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>Z1 <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="sc">-</span><span class="dv">2</span> <span class="sc">*</span> <span class="fu">log</span>(U1)) <span class="sc">*</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> U2)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>Z2 <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="sc">-</span><span class="dv">2</span> <span class="sc">*</span> <span class="fu">log</span>(U1)) <span class="sc">*</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> U2)</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine them for a total of 10,000 standard normal variables</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>rand_normal <span class="ot">&lt;-</span> <span class="fu">c</span>(Z1, Z2)</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(rand_normal, <span class="at">breaks =</span> <span class="dv">50</span>, <span class="at">freq =</span> <span class="cn">FALSE</span>, </span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Standard Normal Distribution (Box-Muller)"</span>, </span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Value"</span>, <span class="at">col =</span> <span class="st">"lavender"</span>)</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dnorm</span>(x), <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"purple"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>Starting with nothing but a basic Linear Congruential Generator, we’ve walked through how to generate uniform variables and then mathematically bend them into entirely new shapes. Whether you are using the Inverse Transform for simple inverses, Acceptance-Rejection for complex bounded densities, or Box-Muller for normals, the <span class="math inline">\(U(0,1)\)</span> random variable remains the fundamental building block of statistical computing and Monte Carlo simulations.</p>
+
+
 </section>
 
 </main> <!-- /main -->

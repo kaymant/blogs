@@ -132,3 +132,119 @@ hist(rand_uniform_ab, main = "Histogram of Uniform Random Variables between 5 an
 ## Generating Other Distributions
 
 Now that we have a good understanding of how to generate uniform random variables, we can use them to generate random variables from other distributions. In the remainder of this post, we will explore some common techniques for doing this, including the Inverse Transform Method, Acceptance-Rejection Method,  and the Box-Muller Transform. 
+
+## Inverse Transform Method
+The Inverse Transform Method is one of the most straightforward ways to generate random variables from a continuous distribution, provided that the cumulative distribution function (CDF) is invertible.
+
+Let $U$ be a uniform random variable on the interval (0, 1). For any continuous probability distribution with CDF $F$, the random variable $X$ defined by:
+$$
+X = F^{-1}(U)
+$$
+
+has the distribution $F$. Let's apply this to the exponential distribution. The CDF of an exponential distribution with rate parameter $\lambda$ is 
+$$
+F(x) = 1 - e^{-\lambda x}
+$$
+
+ Setting $U = 1 - e^{-\lambda x}$ and solving for $x$ gives:
+ $$
+ x = -\frac{1}{\lambda} \ln(1 - U)
+ $$
+ Since $U$ is uniformly distributed on (0, 1), $1 - U$ is also uniformly distributed on (0, 1). Thus, we can simplify this to 
+ $$
+ x = -\frac{1}{\lambda} \ln(U)
+ $$
+ 
+ Here is how we can implement this in R using our previously generated uniform sequence:
+```{r}
+lambda <- 2  # Rate parameter
+# Using rand_seq from our LCG
+rand_exp <- -(1 / lambda) * log(rand_seq)
+
+hist(rand_exp, breaks = 50, freq = FALSE, 
+     main = "Generated Exponential Distribution", 
+     xlab = "Value", col = "lightgreen")
+# Overlay the theoretical density curve
+curve(dexp(x, rate = lambda), add = TRUE, col = "red", lwd = 2)
+```
+
+## The Acceptance-Rejection Method
+
+Sometimes the inverse CDF is mathematically difficult or impossible to compute explicitly. In these cases, the Acceptance-Rejection Method is incredibly useful.Suppose we want to simulate a continuous random variable with a target probability density function (PDF) $f(x)$. We choose a "proposal" density $g(x)$ which we already know how to simulate, and we find a constant $c$ such that $f(x) \leq c \cdot g(x)$ for all $x$.
+
+The algorithm works as follows:
+
+1. Generate $Y$ having density $g$.
+2. Generate a uniform random number $U \sim U(0,1)$. 
+3. If $U \leq \dfrac{f(Y)}{c \, g(Y)}$, accept $X = Y$. Otherwise, reject $Y$ and repeat.
+
+Let's simulate a Beta(2, 2) distribution. The PDF is 
+
+$$
+f(x) = 6x(1-x),  \quad 0 \leq x \leq 1
+$$
+
+Since the domain is [0, 1], we can use the uniform distribution as our proposal distribution, meaning $g(x) = 1$. The maximum value of $f(x)$ occurs at $x = 0.5$, which gives $f(0.5) = 1.5$. Therefore, we can set our bounding constant $c = 1.5$.
+
+```{r}
+n_samples <- 10000
+accepted_samples <- numeric(0)
+c_val <- 1.5
+
+# We will generate pairs of uniforms to act as Y and U
+for (i in 1:n_samples) {
+  # In practice, you'd pull from your LCG sequence. 
+  # Using runif here for clarity in the loop structure.
+  Y <- runif(1) 
+  U <- runif(1)
+  
+  f_Y <- 6 * Y * (1 - Y)
+  g_Y <- 1
+  
+  if (U <= f_Y / (c_val * g_Y)) {
+    accepted_samples <- c(accepted_samples, Y)
+  }
+}
+
+hist(accepted_samples, breaks = 40, freq = FALSE, 
+     main = "Generated Beta(2,2) via Acceptance-Rejection", 
+     xlab = "Value", col = "lightpink")
+curve(dbeta(x, 2, 2), add = TRUE, col = "darkred", lwd = 2)
+```
+
+## The Box-Muller Transform
+
+The Box-Muller transform is an elegant mathematical trick designed specifically to generate independent, standard, normally distributed random variables.
+
+Given two independent uniform random variables $U_1$ and $U_2$ on the interval (0, 1), the Box-Muller transform generates two independent standard normal variables $Z_1$ and $Z_2$:
+
+$$
+Z_1 = \sqrt{-2 \ln U_1} \cos(2\pi U_2)
+$$
+$$
+Z_2 = \sqrt{-2 \ln U_1} \sin(2\pi U_2)
+$$
+
+We can split our rand_seq of 10,000 uniform variables into two sets of 5,000 to represent $U_1$ and $U_2$:
+
+```{r}
+# Split the sequence in half
+U1 <- rand_seq[1:5000]
+U2 <- rand_seq[5001:10000]
+
+# Apply the transform
+Z1 <- sqrt(-2 * log(U1)) * cos(2 * pi * U2)
+Z2 <- sqrt(-2 * log(U1)) * sin(2 * pi * U2)
+
+# Combine them for a total of 10,000 standard normal variables
+rand_normal <- c(Z1, Z2)
+
+hist(rand_normal, breaks = 50, freq = FALSE, 
+     main = "Standard Normal Distribution (Box-Muller)", 
+     xlab = "Value", col = "lavender")
+curve(dnorm(x), add = TRUE, col = "purple", lwd = 2)
+```
+
+## Conclusion
+
+Starting with nothing but a basic Linear Congruential Generator, we've walked through how to generate uniform variables and then mathematically bend them into entirely new shapes. Whether you are using the Inverse Transform for simple inverses, Acceptance-Rejection for complex bounded densities, or Box-Muller for normals, the $U(0,1)$ random variable remains the fundamental building block of statistical computing and Monte Carlo simulations.
