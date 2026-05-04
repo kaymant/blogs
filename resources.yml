@@ -1,6 +1,6 @@
 - title: "Electric Field Lines Visualization"
   description: "An interactive 3D simulation to explore the electric field lines due to point charges."
-  path: /simulations/electric-field/index.html
+  path: /simulations/field_lines/index.html
   image: /images/electric_field_simulator_thumbnail.png
   categories: [Physics, Simulations]
 
