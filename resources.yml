@@ -1,0 +1,17 @@
+- title: "Electric Field Lines Visualization"
+  description: "An interactive 3D simulation to explore the electric field lines due to point charges."
+  path: /simulations/electric-field/index.html
+  image: /images/electric_field_simulator_thumbnail.png
+  categories: [Physics, Simulations]
+
+- title: "Visualizing A 2D Linear Transformation"
+  description: "An interactive web application to visualize how a Linear Transformation changes the 2D space."
+  path: /simulations/linear_transform/index.html
+  image: /images/2d_linear_transform_thumbnail.png
+  categories: [Mathematics, Simulations]
+
+- title: "Optics Lab"
+  description: "An interactive web application to explore the accurate Physics of interaction of white light with Prisms and other glass shapes."
+  path: /simulations/optics_lab/index.html
+  image: /images/optics_lab_thumb.png
+  categories: [Physics, Simulations]

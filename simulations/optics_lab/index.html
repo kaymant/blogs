@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/png" href="/favicon/favicon.ico">
+    <title>Interactive Optics Lab: Shapes & Dispersion</title>
+    <style>
+        body {
+            margin: 0;
+            background: #050505;
+            color: #eee;
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            user-select: none; /* Prevents text selection while dragging */
+            touch-action: none; /* Prevents default browser swipe-to-refresh */
+        }
+        canvas { display: block; cursor: crosshair; touch-action: none; }
+        
+        /* UI repositioned to Bottom Right */
+        .ui {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            pointer-events: none;
+            background: rgba(15, 15, 15, 0.85);
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: calc(100% - 40px);
+            z-index: 10;
+        }
+        code { color: #00ff88; font-weight: bold; }
+        .controls { 
+            pointer-events: auto; 
+            margin-top: 15px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 8px; 
+            max-width: 300px;
+        }
+        button {
+            background: #2a2a2a; color: white; border: 1px solid #555;
+            padding: 10px 14px; border-radius: 6px; cursor: pointer;
+            transition: background 0.2s; font-size: 13px; flex: 1 1 45%;
+        }
+        button:hover { background: #444; }
+        button.danger { background: #4a1a1a; border-color: #772222; flex: 1 1 100%; margin-top: 5px; }
+        button.danger:hover { background: #6a2a2a; }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <b>Interaction Controls:</b><br>
+        • Drag <code>Shape Body</code> to move<br>
+        • Drag <code>Shape Handle</code> to rotate<br>
+        • Drag <code>Light Center</code> to move<br>
+        • Drag <code>Light Handle</code> to aim<br>
+        
+        <div class="controls">
+            <button id="btnAddPrism">Add Prism</button>
+            <button id="btnAddSlab">Add Slab</button>
+            <button id="btnAddRight">Add Right Prism</button>
+            <button id="btnAddSphere">Add Sphere</button>
+            <button id="btnClear" class="danger">Clear All</button>
+        </div>
+    </div>
+    <canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let width, height;
+
+// Physics Constants
+const AIR_N = 1.0;
+const CAUCHY_A = 1.5;    
+const CAUCHY_B = 0.015;  
+const MAX_BOUNCES = 15;
+const HITBOX_RADIUS = 30; // Large for touch screens
+
+// --- Wavelength to RGB Conversion ---
+function getLineColor(lambda) {
+    var redness = 0;
+    if (lambda <= 500) redness = Math.floor(160 - 160 * (lambda - 400) / 100);
+    if ((lambda >= 558) && (lambda < 590)) redness = Math.floor(255 - 255 * (590 - lambda) * (590 - lambda) / (32 * 32));
+    if (lambda >= 590) redness = 255;
+    if (lambda >= 650) redness = Math.floor(255 - 2 * (lambda - 650));
+    redness = Math.max(0, Math.min(255, redness));
+
+    var greenness = 0;
+    if ((lambda > 460) && (lambda < 500)) greenness = Math.floor(255 - 255 * (500 - lambda) * (500 - lambda) / 1600);
+    if ((lambda >= 500) && (lambda <= 570)) greenness = 255;
+    if ((lambda > 570) && (lambda <= 640)) greenness = Math.floor(255 - 255 * (lambda - 570) * (lambda - 570) / (70 * 70));
+    greenness = Math.max(0, Math.min(255, greenness));
+
+    var blueness = 0;
+    if (lambda < 460) blueness = 255;
+    if ((lambda >= 460) && (lambda < 550)) blueness = Math.floor(255 - 255 * (lambda - 460) * (lambda - 460) / (90 * 90));
+    blueness = Math.max(0, Math.min(255, blueness));
+
+    var r = redness.toString(16).padStart(2, '0');
+    var g = greenness.toString(16).padStart(2, '0');
+    var b = blueness.toString(16).padStart(2, '0');
+    return "#" + r + g + b;
+}
+
+// Generate continuous spectrum (400nm to 700nm in 5nm steps)
+const spectrum = [];
+for (let nm = 400; nm <= 700; nm += 2) {
+    spectrum.push({ nm: nm, hex: getLineColor(nm) });
+}
+
+// App State
+let shapes = [];
+let light = { x: 150, y: 0, angle: 0.1 };
+let dragTarget = null;
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    if (light.y === 0) light.y = height / 2;
+}
+
+function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    addShape('equilateral', width / 2 - 100, height / 2, -0.2);
+    animate();
+}
+
+// --- Math Helpers ---
+const mag = (v) => Math.sqrt(v.x * v.x + v.y * v.y);
+const normalize = (v) => { const len = mag(v); return len === 0 ? {x:0, y:0} : {x: v.x/len, y: v.y/len}; };
+const dot = (v1, v2) => v1.x * v2.x + v1.y * v2.y;
+const dist = (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+// --- Geometry Generation (Strict Clockwise) ---
+function getShapeVertices(shape) {
+    const verts = [];
+    const R = shape.size;
+    const rot = shape.rotation;
+    
+    // Define base coordinates (clockwise) relative to center
+    let baseVerts = [];
+    
+    if (shape.type === 'equilateral') {
+        const h = R * Math.sqrt(3) / 2;
+        baseVerts = [
+            { x: 0, y: -R },            // Top
+            { x: h, y: R/2 },           // Bottom Right
+            { x: -h, y: R/2 }           // Bottom Left
+        ];
+    } 
+    else if (shape.type === 'rectangle') {
+        const W = R * 1.5;
+        const H = R;
+        baseVerts = [
+            { x: -W/2, y: -H/2 },       // Top Left
+            { x: W/2, y: -H/2 },        // Top Right
+            { x: W/2, y: H/2 },         // Bottom Right
+            { x: -W/2, y: H/2 }         // Bottom Left
+        ];
+    }
+    else if (shape.type === 'right') {
+        baseVerts = [
+            { x: -R/2, y: -R/2 },       // Top Left
+            { x: R/2, y: -R/2 },        // Top Right
+            { x: R/2, y: R/2 }          // Bottom Right (Hypotenuse connects BR to TL)
+        ];
+    }
+    else if (shape.type === 'circle') {
+        for (let i = 0; i < 360; i++) {
+            const angle = (i * Math.PI * 2) / 360;
+            baseVerts.push({ x: Math.cos(angle) * R, y: Math.sin(angle) * R });
+        }
+    }
+
+    // Apply rotation and translation
+    const cosA = Math.cos(rot);
+    const sinA = Math.sin(rot);
+    
+    for (let i = 0; i < baseVerts.length; i++) {
+        const bx = baseVerts[i].x;
+        const by = baseVerts[i].y;
+        verts.push({
+            x: shape.x + (bx * cosA - by * sinA),
+            y: shape.y + (bx * sinA + by * cosA)
+        });
+    }
+    return verts;
+}
+
+function getShapeHandle(s) {
+    return { x: s.x + Math.cos(s.rotation) * (s.size + 40), y: s.y + Math.sin(s.rotation) * (s.size + 40) };
+}
+
+function getLightHandle() {
+    return { x: light.x + Math.cos(light.angle) * 50, y: light.y + Math.sin(light.angle) * 50 };
+}
+
+function intersect(rayOrigin, rayDir, p1, p2) {
+    const v1 = rayOrigin.x - p1.x, v2 = rayOrigin.y - p1.y;
+    const v3 = p2.x - p1.x, v4 = p2.y - p1.y;
+    const den = (v4 * rayDir.x - v3 * rayDir.y);
+    if (den === 0) return null;
+    
+    const t1 = (v3 * v2 - v4 * v1) / den; 
+    const t2 = (rayDir.x * v2 - rayDir.y * v1) / den; 
+    
+    // Epsilon 0.05 prevents self-collision immediately after exiting
+    if (t1 > 0.05 && t2 >= 0 && t2 <= 1) { 
+        return { x: rayOrigin.x + rayDir.x * t1, y: rayOrigin.y + rayDir.y * t1, dist: t1 };
+    }
+    return null;
+}
+
+function calculateBounce(incident, normal, n1, n2) {
+    const r = n1 / n2;
+    const c1 = -dot(normal, incident); // Normal must face AGAINST ray
+    const c2 = 1 - r * r * (1 - c1 * c1);
+    
+    if (c2 < 0) {
+        // Total Internal Reflection (TIR)
+        return { dir: { x: incident.x + 2 * c1 * normal.x, y: incident.y + 2 * c1 * normal.y } };
+    }
+    // Refraction
+    const k = r * c1 - Math.sqrt(c2);
+    return { dir: { x: r * incident.x + k * normal.x, y: r * incident.y + k * normal.y } };
+}
+
+// --- Interaction / Controls ---
+function addShape(type, x, y, rotation = 0) {
+    shapes.push({ x, y, size: 80, rotation, type });
+}
+
+document.getElementById('btnAddPrism').onclick = () => addShape('equilateral', width/2, height/2);
+document.getElementById('btnAddSlab').onclick = () => addShape('rectangle', width/2, height/2);
+document.getElementById('btnAddRight').onclick = () => addShape('right', width/2, height/2);
+document.getElementById('btnAddSphere').onclick = () => addShape('circle', width/2, height/2, 0, 90);
+document.getElementById('btnClear').onclick = () => { shapes = []; };
+
+// Unified pointer logic for Mouse and Touch
+function handlePointerDown(mx, my) {
+    if (dist({x: mx, y: my}, getLightHandle()) < HITBOX_RADIUS) { dragTarget = { type: 'light_handle' }; return; }
+    if (dist({x: mx, y: my}, light) < HITBOX_RADIUS) { dragTarget = { type: 'light_center' }; return; }
+    
+    for (let i = shapes.length - 1; i >= 0; i--) {
+        const s = shapes[i];
+        if (dist({x: mx, y: my}, getShapeHandle(s)) < HITBOX_RADIUS) {
+            dragTarget = { type: 'shape_handle', index: i }; return;
+        }
+        if (dist({x: mx, y: my}, {x: s.x, y: s.y}) < s.size) {
+            dragTarget = { type: 'shape_center', index: i, offsetX: mx - s.x, offsetY: my - s.y }; return;
+        }
+    }
+}
+
+function handlePointerMove(mx, my) {
+    if (!dragTarget) return;
+    if (dragTarget.type === 'light_handle') {
+        light.angle = Math.atan2(my - light.y, mx - light.x);
+    } else if (dragTarget.type === 'light_center') {
+        light.x = mx; light.y = my;
+    } else if (dragTarget.type === 'shape_center') {
+        shapes[dragTarget.index].x = mx - dragTarget.offsetX;
+        shapes[dragTarget.index].y = my - dragTarget.offsetY;
+    } else if (dragTarget.type === 'shape_handle') {
+        shapes[dragTarget.index].rotation = Math.atan2(my - shapes[dragTarget.index].y, mx - shapes[dragTarget.index].x);
+    }
+}
+
+function handlePointerUp() { dragTarget = null; }
+
+// Attach Listeners
+window.addEventListener('mousedown', (e) => handlePointerDown(e.clientX, e.clientY));
+window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', handlePointerUp);
+
+window.addEventListener('touchstart', (e) => {
+    if (e.target === canvas) { e.preventDefault(); handlePointerDown(e.touches[0].clientX, e.touches[0].clientY); }
+}, { passive: false });
+window.addEventListener('touchmove', (e) => {
+    if (e.target === canvas) { e.preventDefault(); handlePointerMove(e.touches[0].clientX, e.touches[0].clientY); }
+}, { passive: false });
+window.addEventListener('touchend', handlePointerUp);
+
+// --- Main Render Loop ---
+function animate() {
+    // Clear
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw Shapes
+    shapes.forEach(s => {
+        const verts = getShapeVertices(s);
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+        ctx.lineWidth = 1;
+        
+        ctx.moveTo(verts[0].x, verts[0].y);
+        for(let i=1; i<verts.length; i++) ctx.lineTo(verts[i].x, verts[i].y);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // Draw Rotation Handle (only if not a circle to save visual clutter)
+        if (s.type !== 'circle') {
+            const handle = getShapeHandle(s);
+            ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(handle.x, handle.y); ctx.stroke();
+            ctx.beginPath(); ctx.arc(handle.x, handle.y, 7, 0, Math.PI * 2);
+            ctx.fillStyle = "#666"; ctx.fill(); ctx.stroke();
+        }
+    });
+
+    // Draw Light Controls
+    const lh = getLightHandle();
+    ctx.beginPath(); ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.moveTo(light.x, light.y); ctx.lineTo(lh.x, lh.y); ctx.stroke();
+    ctx.beginPath(); ctx.arc(lh.x, lh.y, 7, 0, Math.PI*2); ctx.fillStyle = "white"; ctx.fill();
+    ctx.beginPath(); ctx.arc(light.x, light.y, 10, 0, Math.PI*2); ctx.fill();
+
+    // Trace Rays
+    ctx.globalCompositeOperation = 'screen'; 
+    ctx.lineWidth = 0.8; // Thin lines for gradient blending
+
+    spectrum.forEach(spec => {
+        const nGlass = CAUCHY_A + (CAUCHY_B / Math.pow(spec.nm / 1000, 2));
+        ctx.strokeStyle = spec.hex;
+        ctx.beginPath();
+        
+        let currentPos = { x: light.x, y: light.y };
+        let rayDir = { x: Math.cos(light.angle), y: Math.sin(light.angle) };
+        ctx.moveTo(currentPos.x, currentPos.y);
+
+        for (let bounce = 0; bounce < MAX_BOUNCES; bounce++) {
+            let closestHit = null;
+            let closestDist = Infinity;
+            let outwardNormal = null;
+
+            // Check intersections against all shapes
+            shapes.forEach(s => {
+                const verts = getShapeVertices(s);
+                const vLen = verts.length;
+                for (let i = 0; i < vLen; i++) {
+                    const p1 = verts[i], p2 = verts[(i + 1) % vLen];
+                    const hit = intersect(currentPos, rayDir, p1, p2);
+                    
+                    if (hit && hit.dist < closestDist) {
+                        closestDist = hit.dist;
+                        closestHit = hit;
+                        // Strict Clockwise -> Outward normal (Y-down fix)
+                        outwardNormal = normalize({ x: p2.y - p1.y, y: -(p2.x - p1.x) });
+                    }
+                }
+            });
+
+            if (closestHit) {
+                ctx.lineTo(closestHit.x, closestHit.y);
+                const dotProd = dot(rayDir, outwardNormal);
+                
+                if (dotProd < 0) {
+                    // Entering (Air to Glass)
+                    rayDir = calculateBounce(rayDir, outwardNormal, AIR_N, nGlass).dir;
+                } else {
+                    // Exiting (Glass to Air) - Invert normal
+                    const inwardNormal = { x: -outwardNormal.x, y: -outwardNormal.y };
+                    rayDir = calculateBounce(rayDir, inwardNormal, nGlass, AIR_N).dir;
+                }
+                currentPos = closestHit;
+            } else {
+                ctx.lineTo(currentPos.x + rayDir.x * 2000, currentPos.y + rayDir.y * 2000);
+                break;
+            }
+        }
+        ctx.stroke();
+    });
+
+    requestAnimationFrame(animate);
+}
+
+// Boot up
+init();
+</script>
+</body>
+</html>

@@ -278,14 +278,7 @@
     "href": "resources.html",
     "title": "Resources & Interactive Tools",
     "section": "",
-    "text": "Welcome to the resources page. Here you will find interactive simulations, visual tools, and materials I use for teaching Physics and Mathematics."
-  },
-  {
-    "objectID": "resources.html#simulations-animations",
-    "href": "resources.html#simulations-animations",
-    "title": "Resources & Interactive Tools",
-    "section": "Simulations / Animations",
-    "text": "Simulations / Animations\n\nElectric Field Lines Visualization\nAn interactive 3D simulation to explore electric fields and point charges.\nHow Linear Transformations transform Space See how a linear transformation rotates and stretches the 2-dimensional space in real time and how the eigen-directions won’t budge.\n\n\n(More tools and booklets will be added here soon.)"
+    "text": "Welcome to the resources page. Here you will find interactive simulations, visual tools, and materials I use for teaching Physics and Mathematics.\n\n\n    \n      \n      \n    \n\n\n\n\n\n\n\n\n\n\nElectric Field Lines Visualization\n\n\n\nPhysics\n\nSimulations\n\n\n\nAn interactive 3D simulation to explore the electric field lines due to point charges.\n\n\n\n\n\n\n\n\n\n\n\n\nVisualizing A 2D Linear Transformation\n\n\n\nMathematics\n\nSimulations\n\n\n\nAn interactive web application to visualize how a Linear Transformation changes the 2D space.\n\n\n\n\n\n\n\n\n\n\n\n\nOptics Lab\n\n\n\nPhysics\n\nSimulations\n\n\n\nAn interactive web application to explore the accurate Physics of interaction of white light with Prisms and other glass shapes.\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "posts/contour-plots/index.html",
