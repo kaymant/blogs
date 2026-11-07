@@ -4,6 +4,7 @@ project:
   resources: 
     - CNAME
     - "simulations/"
+    - "etc/"
 
 website:
   title: "Anant's Blog" 

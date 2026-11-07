@@ -10,7 +10,1515 @@
 <atom:link href="https://anantkumar.online/index.xml" rel="self" type="application/rss+xml"/>
 <description>A blog about Mathematics, Physics, Machine Learning, and EdTech.</description>
 <generator>quarto-1.8.27</generator>
-<lastBuildDate>Thu, 21 May 2026 18:30:00 GMT</lastBuildDate>
+<lastBuildDate>Mon, 19 Oct 2026 18:30:00 GMT</lastBuildDate>
+<item>
+  <title>Edge Detection for Computer Vision</title>
+  <dc:creator>Anant Kumar</dc:creator>
+  <link>https://anantkumar.online/posts/edge-detection-computer-vision/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Prerequisites
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Basic Python, NumPy arrays, elementary calculus and matrix operations.</p>
+<p><strong>What shall we explore:</strong> How local changes in image intensity can reveal edges, how derivative filters work, and why Canny combines several operations rather than relying on a single filter.</p>
+</div>
+</div>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Consider a photograph of a building. Even after removing much of its colour and texture, the outline of its walls, windows and roof can remain recognizable.</p>
+<p>This observation suggests an interesting question:</p>
+<p><strong>How much of the information needed to understand an image is contained in its boundaries?</strong></p>
+<p>Edges are useful because they often mark changes in surface geometry, illumination, reflectance or object identity.</p>
+<p>However, not every intensity change corresponds to a physical object boundary. Shadows, textures, highlights and noise can also create strong responses.</p>
+<p>In this article, we will investigate how a computer can detect these changes using elementary mathematics.</p>
+<p>We will gradually build an edge detector, beginning with one-dimensional signals and ending with the main stages of the Canny algorithm.</p>
+</section>
+<section id="understanding-an-image-as-a-function" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Understanding an Image as a Function</h1>
+<p>A grayscale image can be represented as a function</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AI(x,y):%5Cmathbb%7BR%7D%5E2%5Crightarrow%5Cmathbb%7BR%7D,%0A"></p>
+<p>where <img src="https://latex.codecogs.com/png.latex?I(x,y)"> denotes intensity at position <img src="https://latex.codecogs.com/png.latex?(x,y)">.</p>
+<p>In a digital image, we only observe samples on a discrete pixel grid.</p>
+<p>For an image of height <img src="https://latex.codecogs.com/png.latex?H"> and width <img src="https://latex.codecogs.com/png.latex?W">, we use a matrix</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AI%5Cin%5Cmathbb%7BR%7D%5E%7BH%5Ctimes%20W%7D.%0A"></p>
+<p>For an 8-bit grayscale image, intensities commonly range from 0 to 255.</p>
+<p>Let us construct a simple image containing a vertical intensity boundary.</p>
+<div id="cell-fig-synthetic-edge" class="cell" data-fig-height="3" data-fig-width="7" data-execution_count="1">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> numpy <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> np</span>
+<span id="cb1-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> matplotlib.pyplot <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> plt</span>
+<span id="cb1-3"></span>
+<span id="cb1-4">image <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.zeros((<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">160</span>), dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb1-5">image[:, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">80</span>:] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.0</span></span>
+<span id="cb1-6"></span>
+<span id="cb1-7">fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots()</span>
+<span id="cb1-8">ax.imshow(image, cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gray"</span>, vmin<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, vmax<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb1-9">ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"A vertical intensity boundary"</span>)</span>
+<span id="cb1-10">ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Horizontal pixel coordinate"</span>)</span>
+<span id="cb1-11">ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Vertical pixel coordinate"</span>)</span>
+<span id="cb1-12">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-synthetic-edge" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-synthetic-edge-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/edge-detection-computer-vision/index_files/figure-html/fig-synthetic-edge-output-1.png" width="585" height="405" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-synthetic-edge-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: A synthetic image containing a vertical step edge.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The brightness jumps from zero to one at the boundary.</p>
+<p>Our objective is to identify this transition mathematically.</p>
+</section>
+<section id="what-exactly-is-an-edge" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What Exactly Is an Edge?</h1>
+<p>A useful model of an edge is a region where image intensity changes rapidly.</p>
+<p>Different physical situations produce different intensity profiles.</p>
+<section id="step-edges" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="step-edges"><span class="header-section-number">3.1</span> Step edges</h2>
+<p>An ideal step edge can be represented by</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Af(x)=%0A%5Cbegin%7Bcases%7D%0A0,%20&amp;%20x%3C0,%5C%5C%0A1,%20&amp;%20x%5Cgeq0.%0A%5Cend%7Bcases%7D%0A"></p>
+<p>Its intensity changes abruptly.</p>
+</section>
+<section id="ramp-edges" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="ramp-edges"><span class="header-section-number">3.2</span> Ramp edges</h2>
+<p>Real optical systems blur sharp boundaries. As a result, an abrupt step may become a gradual ramp.</p>
+</section>
+<section id="roof-edges" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="roof-edges"><span class="header-section-number">3.3</span> Roof edges</h2>
+<p>A thin bright line on a dark background can produce a roof-shaped intensity profile.</p>
+<p>The distinction matters because first and second derivatives respond differently to these profiles.</p>
+<div id="cell-fig-edge-profiles" class="cell" data-fig-height="3" data-fig-width="9" data-execution_count="2">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1">x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">401</span>)</span>
+<span id="cb2-2"></span>
+<span id="cb2-3">step <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>).astype(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb2-4">ramp <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.clip((x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb2-5">roof <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.maximum(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">abs</span>(x) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb2-6"></span>
+<span id="cb2-7">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>))</span>
+<span id="cb2-8"></span>
+<span id="cb2-9"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> ax, values, title <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">zip</span>(</span>
+<span id="cb2-10">    axes,</span>
+<span id="cb2-11">    [step, ramp, roof],</span>
+<span id="cb2-12">    [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Step edge"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Ramp edge"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Roof edge"</span>]</span>
+<span id="cb2-13">):</span>
+<span id="cb2-14">    ax.plot(x, values)</span>
+<span id="cb2-15">    ax.set_title(title)</span>
+<span id="cb2-16">    ax.set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Position"</span>)</span>
+<span id="cb2-17">    ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Intensity"</span>)</span>
+<span id="cb2-18">    ax.grid(alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.25</span>)</span>
+<span id="cb2-19"></span>
+<span id="cb2-20">plt.tight_layout()</span>
+<span id="cb2-21">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-edge-profiles" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-edge-profiles-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/edge-detection-computer-vision/index_files/figure-html/fig-edge-profiles-output-1.png" width="950" height="278" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-edge-profiles-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Examples of step, ramp and roof intensity profiles.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="detecting-edges-using-derivatives" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Detecting Edges Using Derivatives</h1>
+<p>The derivative measures how rapidly a function changes.</p>
+<p>For a continuous one-dimensional intensity function,</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Af'(x)=%5Clim_%7Bh%5Crightarrow0%7D%0A%5Cfrac%7Bf(x+h)-f(x)%7D%7Bh%7D.%0A"></p>
+<p>A large derivative magnitude indicates rapid variation.</p>
+<section id="discrete-derivatives" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="discrete-derivatives"><span class="header-section-number">4.1</span> Discrete derivatives</h2>
+<p>Digital images contain sampled values, so we approximate derivatives using finite differences.</p>
+<p>The forward difference is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Af'(x)%5Capprox%5Cfrac%7Bf(x+h)-f(x)%7D%7Bh%7D.%0A"></p>
+<p>The central difference is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Af'(x)%5Capprox%0A%5Cfrac%7Bf(x+h)-f(x-h)%7D%7B2h%7D.%0A"></p>
+<p>For unit pixel spacing, <img src="https://latex.codecogs.com/png.latex?h=1">.</p>
+<div id="cell-fig-discrete-derivatives" class="cell" data-fig-height="5" data-fig-width="8" data-execution_count="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1">x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.arange(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb3-2">signal <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">50</span>).astype(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb3-3"></span>
+<span id="cb3-4">forward <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.diff(signal, append<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>signal[<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>])</span>
+<span id="cb3-5">central <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.zeros_like(signal)</span>
+<span id="cb3-6">central[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>:<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (signal[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>:] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> signal[:<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>]) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span></span>
+<span id="cb3-7"></span>
+<span id="cb3-8">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, sharex<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span>
+<span id="cb3-9"></span>
+<span id="cb3-10">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].plot(x, signal)</span>
+<span id="cb3-11">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Intensity"</span>)</span>
+<span id="cb3-12">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Step signal"</span>)</span>
+<span id="cb3-13"></span>
+<span id="cb3-14">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].plot(x, forward, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Forward difference"</span>)</span>
+<span id="cb3-15">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].plot(x, central, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Central difference"</span>,</span>
+<span id="cb3-16">             linestyle<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"--"</span>)</span>
+<span id="cb3-17">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Derivative"</span>)</span>
+<span id="cb3-18">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Position"</span>)</span>
+<span id="cb3-19">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].legend()</span>
+<span id="cb3-20"></span>
+<span id="cb3-21">plt.tight_layout()</span>
+<span id="cb3-22">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-discrete-derivatives" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-discrete-derivatives-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/edge-detection-computer-vision/index_files/figure-html/fig-discrete-derivatives-output-1.png" width="662" height="470" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-discrete-derivatives-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: A sampled step edge and its numerical derivatives.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Observation:</strong> The derivative becomes large near the intensity boundary and remains zero in constant regions.</p>
+<p>This is the central idea behind gradient-based edge detection.</p>
+</section>
+</section>
+<section id="extending-derivatives-to-two-dimensions" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Extending Derivatives to Two Dimensions</h1>
+<p>A two-dimensional image can change in two independent directions.</p>
+<p>The partial derivatives are</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AG_x=%5Cfrac%7B%5Cpartial%20I%7D%7B%5Cpartial%20x%7D,%0A%5Cqquad%0AG_y=%5Cfrac%7B%5Cpartial%20I%7D%7B%5Cpartial%20y%7D.%0A"></p>
+<p>Together, they form the image gradient:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cnabla%20I=%0A%5Cbegin%7Bbmatrix%7D%0AG_x%5C%5C%0AG_y%0A%5Cend%7Bbmatrix%7D.%0A"></p>
+<p>The magnitude of the gradient is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AG(x,y)=%5Csqrt%7BG_x%5E2+G_y%5E2%7D.%0A"></p>
+<p>The gradient orientation is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Ctheta(x,y)=%20%5Ctan%5E%7B-1%7D%5Cfrac%7BG_y%7D%7BG_x%7D%20%25%5Coperatorname%7Batan2%7D(G_y,G_x).%0A"></p>
+<p>The gradient points in the direction of maximum local intensity increase.</p>
+<p>The direction of the edge itself is perpendicular to the gradient direction.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Coordinate convention
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In standard mathematical coordinates, <img src="https://latex.codecogs.com/png.latex?y"> increases upward. In most image arrays, row indices increase downward.</p>
+<p>Consequently, the sign and interpretation of the vertical derivative depend on the coordinate convention.</p>
+<p>Throughout the numerical experiments, we use image-array coordinates unless stated otherwise.</p>
+</div>
+</div>
+</section>
+<section id="correlation-and-convolution" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Correlation and Convolution</h1>
+<p>Before applying image filters, we need to understand how a small matrix, called a kernel, operates on an image.</p>
+<section id="cross-correlation" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="cross-correlation"><span class="header-section-number">6.1</span> Cross-correlation</h2>
+<p>For an image <img src="https://latex.codecogs.com/png.latex?I"> and kernel <img src="https://latex.codecogs.com/png.latex?K">, discrete cross-correlation can be written as</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A(I%5Cstar%20K)%5Bi,j%5D%0A=%0A%5Csum_%7Bm,n%7DI%5Bi+m,j+n%5DK%5Bm,n%5D.%0A"></p>
+<p>The kernel is moved across the image, and a weighted sum of neighboring pixel values is computed.</p>
+</section>
+<section id="convolution" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="convolution"><span class="header-section-number">6.2</span> Convolution</h2>
+<p>Mathematical convolution reverses the kernel indices:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A(I*K)%5Bi,j%5D%0A=%0A%5Csum_%7Bm,n%7DI%5Bi-m,j-n%5DK%5Bm,n%5D.%0A"></p>
+<p>For finite arrays, the exact summation limits and boundary behavior depend on the padding convention.</p>
+<p>For a symmetric kernel, correlation and convolution produce the same result.</p>
+<p>For an asymmetric derivative kernel, their outputs can differ in sign.</p>
+</section>
+<section id="numpy-implementation" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="numpy-implementation"><span class="header-section-number">6.3</span> NumPy implementation</h2>
+<p>The following function performs valid cross-correlation without using a filtering library.</p>
+<div id="correlation-implementation" class="cell" data-execution_count="4">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> correlate2d(image, kernel):</span>
+<span id="cb4-2">    image <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.asarray(image, dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb4-3">    kernel <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.asarray(kernel, dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb4-4"></span>
+<span id="cb4-5">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> image.ndim <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">or</span> kernel.ndim <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>:</span>
+<span id="cb4-6">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Expected two-dimensional arrays"</span>)</span>
+<span id="cb4-7"></span>
+<span id="cb4-8">    h, w <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> image.shape</span>
+<span id="cb4-9">    kh, kw <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> kernel.shape</span>
+<span id="cb4-10"></span>
+<span id="cb4-11">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> kh <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> h <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">or</span> kw <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> w:</span>
+<span id="cb4-12">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Kernel is larger than image"</span>)</span>
+<span id="cb4-13"></span>
+<span id="cb4-14">    output <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.zeros((h<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>kh<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, w<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>kw<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>))</span>
+<span id="cb4-15"></span>
+<span id="cb4-16">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> i <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(output.shape[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>]):</span>
+<span id="cb4-17">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> j <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(output.shape[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>]):</span>
+<span id="cb4-18">            patch <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> image[i:i<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span>kh, j:j<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span>kw]</span>
+<span id="cb4-19">            output[i,j] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(patch <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> kernel)</span>
+<span id="cb4-20"></span>
+<span id="cb4-21">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> output</span>
+<span id="cb4-22"></span>
+<span id="cb4-23"></span>
+<span id="cb4-24"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> convolve2d(image, kernel):</span>
+<span id="cb4-25">    kernel <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.asarray(kernel, dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb4-26">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> correlate2d(image, kernel[::<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, ::<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>])</span></code></pre></div></div>
+</details>
+</div>
+<p>We can verify the difference using an asymmetric kernel.</p>
+<div id="c81b1232" class="cell" data-execution_count="5">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1">small_image <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.arange(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">25</span>).reshape(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>)</span>
+<span id="cb5-2"></span>
+<span id="cb5-3">kernel <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.array([</span>
+<span id="cb5-4">    [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>],</span>
+<span id="cb5-5">    [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>],</span>
+<span id="cb5-6">    [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>]</span>
+<span id="cb5-7">])</span>
+<span id="cb5-8"></span>
+<span id="cb5-9"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Correlation:"</span>)</span>
+<span id="cb5-10"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(correlate2d(small_image, kernel))</span>
+<span id="cb5-11"></span>
+<span id="cb5-12"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Convolution:"</span>)</span>
+<span id="cb5-13"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(convolve2d(small_image, kernel))</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Correlation:
+[[8. 8. 8.]
+ [8. 8. 8.]
+ [8. 8. 8.]]
+
+Convolution:
+[[-8. -8. -8.]
+ [-8. -8. -8.]
+ [-8. -8. -8.]]</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Experiment
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Replace the asymmetric kernel with a symmetric Gaussian kernel. What happens to the difference between convolution and correlation?</p>
+</div>
+</div>
+</section>
+</section>
+<section id="first-order-edge-operators" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> First-Order Edge Operators</h1>
+<p>We can estimate horizontal and vertical intensity gradients using discrete derivative filters.</p>
+<p>Simple central-difference kernels are</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AD_x=%5Cfrac12%0A%5Cbegin%7Bbmatrix%7D-1&amp;0&amp;1%5Cend%7Bbmatrix%7D%0A"></p>
+<p>and</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AD_y=%5Cfrac12%0A%5Cbegin%7Bbmatrix%7D-1%5C%5C0%5C%5C1%5Cend%7Bbmatrix%7D.%0A"></p>
+<p>These operators respond to changes along their respective axes.</p>
+<p>However, simple derivatives are sensitive to noise.</p>
+<p>This motivates combining derivative estimation with local smoothing.</p>
+</section>
+<section id="sobel-and-prewitt-operators" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Sobel and Prewitt Operators</h1>
+<section id="sobel-operator" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="sobel-operator"><span class="header-section-number">8.1</span> Sobel operator</h2>
+<p>Using the image-coordinate convention, the Sobel cross-correlation kernels are</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AS_x=%0A%5Cbegin%7Bbmatrix%7D%0A-1&amp;0&amp;1%5C%5C%0A-2&amp;0&amp;2%5C%5C%0A-1&amp;0&amp;1%0A%5Cend%7Bbmatrix%7D%0A"></p>
+<p>and</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AS_y=%0A%5Cbegin%7Bbmatrix%7D%0A-1&amp;-2&amp;-1%5C%5C%0A0&amp;0&amp;0%5C%5C%0A1&amp;2&amp;1%0A%5Cend%7Bbmatrix%7D.%0A"></p>
+<p>The Sobel operator combines differentiation in one direction with weighted averaging in the perpendicular direction.</p>
+</section>
+<section id="prewitt-operator" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="prewitt-operator"><span class="header-section-number">8.2</span> Prewitt operator</h2>
+<p>The corresponding Prewitt kernels are</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AP_x=%0A%5Cbegin%7Bbmatrix%7D%0A-1&amp;0&amp;1%5C%5C%0A-1&amp;0&amp;1%5C%5C%0A-1&amp;0&amp;1%0A%5Cend%7Bbmatrix%7D,%0A%5Cquad%0AP_y=%0A%5Cbegin%7Bbmatrix%7D%0A-1&amp;-1&amp;-1%5C%5C%0A0&amp;0&amp;0%5C%5C%0A1&amp;1&amp;1%0A%5Cend%7Bbmatrix%7D.%0A"></p>
+<p>Both operators estimate local image gradients.</p>
+<p>Sobel places greater weight on the central row or column, providing a degree of smoothing.</p>
+</section>
+<section id="numerical-experiment" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="numerical-experiment"><span class="header-section-number">8.3</span> Numerical experiment</h2>
+<div id="cell-fig-sobel" class="cell" data-fig-height="3" data-fig-width="10" data-execution_count="6">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1">sobel_x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.array([</span>
+<span id="cb7-2">    [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>],</span>
+<span id="cb7-3">    [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>],</span>
+<span id="cb7-4">    [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>]</span>
+<span id="cb7-5">])</span>
+<span id="cb7-6"></span>
+<span id="cb7-7">sobel_y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.array([</span>
+<span id="cb7-8">    [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>],</span>
+<span id="cb7-9">    [ <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>,  <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>,  <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>],</span>
+<span id="cb7-10">    [ <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>,  <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>,  <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>]</span>
+<span id="cb7-11">])</span>
+<span id="cb7-12"></span>
+<span id="cb7-13">gx <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(image, sobel_x)</span>
+<span id="cb7-14">gy <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(image, sobel_y)</span>
+<span id="cb7-15"></span>
+<span id="cb7-16">magnitude <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.hypot(gx, gy)</span>
+<span id="cb7-17"></span>
+<span id="cb7-18">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>))</span>
+<span id="cb7-19"></span>
+<span id="cb7-20"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> ax, data, title <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">zip</span>(</span>
+<span id="cb7-21">    axes,</span>
+<span id="cb7-22">    [gx, gy, magnitude],</span>
+<span id="cb7-23">    [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Horizontal gradient"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Vertical gradient"</span>,</span>
+<span id="cb7-24">     <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Gradient magnitude"</span>]</span>
+<span id="cb7-25">):</span>
+<span id="cb7-26">    ax.imshow(data, cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gray"</span>)</span>
+<span id="cb7-27">    ax.set_title(title)</span>
+<span id="cb7-28">    ax.axis(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"off"</span>)</span>
+<span id="cb7-29"></span>
+<span id="cb7-30">plt.tight_layout()</span>
+<span id="cb7-31">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-sobel" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-sobel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/edge-detection-computer-vision/index_files/figure-html/fig-sobel-output-1.png" width="950" height="226" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sobel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Horizontal and vertical Sobel responses to a synthetic edge.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Questions to investigate:</strong></p>
+<ul>
+<li>Why is the vertical boundary prominent in <img src="https://latex.codecogs.com/png.latex?G_x">?</li>
+<li>Why is <img src="https://latex.codecogs.com/png.latex?G_y"> approximately zero?</li>
+<li>What happens if the image contains a horizontal edge?</li>
+<li>What happens for an edge inclined at <img src="https://latex.codecogs.com/png.latex?45%5E%5Ccirc">?</li>
+</ul>
+</section>
+</section>
+<section id="second-order-derivatives-the-laplacian" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Second-Order Derivatives: The Laplacian</h1>
+<p>The Laplacian is the sum of second partial derivatives:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cnabla%5E2I=%0A%5Cfrac%7B%5Cpartial%5E2I%7D%7B%5Cpartial%20x%5E2%7D%0A+%0A%5Cfrac%7B%5Cpartial%5E2I%7D%7B%5Cpartial%20y%5E2%7D.%0A"></p>
+<p>A common discrete approximation is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AL=%0A%5Cbegin%7Bbmatrix%7D%0A0&amp;1&amp;0%5C%5C%0A1&amp;-4&amp;1%5C%5C%0A0&amp;1&amp;0%0A%5Cend%7Bbmatrix%7D.%0A"></p>
+<p>An eight-neighbor variant is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AL_8=%0A%5Cbegin%7Bbmatrix%7D%0A1&amp;1&amp;1%5C%5C%0A1&amp;-8&amp;1%5C%5C%0A1&amp;1&amp;1%0A%5Cend%7Bbmatrix%7D.%0A"></p>
+<p>Unlike gradient magnitude, Laplacian responses are signed.</p>
+<p>Edges can be identified by examining appropriate zero crossings of the second derivative.</p>
+<p>Simply taking the absolute value of the Laplacian produces a response map, but is not equivalent to zero-crossing edge detection.</p>
+<div id="cell-fig-laplacian" class="cell" data-fig-height="3" data-fig-width="8" data-execution_count="7">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1">laplacian_kernel <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.array([</span>
+<span id="cb8-2">    [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>,  <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>],</span>
+<span id="cb8-3">    [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>],</span>
+<span id="cb8-4">    [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>,  <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>]</span>
+<span id="cb8-5">])</span>
+<span id="cb8-6"></span>
+<span id="cb8-7">lap_response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(image, laplacian_kernel)</span>
+<span id="cb8-8"></span>
+<span id="cb8-9">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>))</span>
+<span id="cb8-10"></span>
+<span id="cb8-11">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].imshow(lap_response, cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"coolwarm"</span>)</span>
+<span id="cb8-12">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Signed Laplacian"</span>)</span>
+<span id="cb8-13"></span>
+<span id="cb8-14">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].imshow(np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">abs</span>(lap_response), cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gray"</span>)</span>
+<span id="cb8-15">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Laplacian magnitude"</span>)</span>
+<span id="cb8-16"></span>
+<span id="cb8-17"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> ax <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> axes:</span>
+<span id="cb8-18">    ax.axis(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"off"</span>)</span>
+<span id="cb8-19"></span>
+<span id="cb8-20">plt.tight_layout()</span>
+<span id="cb8-21">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-laplacian" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-laplacian-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/edge-detection-computer-vision/index_files/figure-html/fig-laplacian-output-1.png" width="758" height="264" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-laplacian-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Laplacian response and its magnitude.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="why-noise-creates-false-edges" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Why Noise Creates False Edges</h1>
+<p>Numerical differentiation emphasizes rapid changes.</p>
+<p>Unfortunately, random noise also produces rapid intensity variations.</p>
+<p>Consider a noisy image:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AI_%7B%5Cmathrm%7Bnoisy%7D%7D(x,y)%0A=%0AI(x,y)+%5Ceta(x,y),%0A"></p>
+<p>where <img src="https://latex.codecogs.com/png.latex?%5Ceta"> is a random noise process.</p>
+<p>Derivative filters operate on both the image and the noise.</p>
+<p>For this reason, edge-detection algorithms often smooth the image before computing derivatives.</p>
+</section>
+<section id="gaussian-smoothing" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Gaussian Smoothing</h1>
+<p>The two-dimensional Gaussian function is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AG_%5Csigma(x,y)=%0A%5Cfrac%7B1%7D%7B2%5Cpi%5Csigma%5E2%7D%0A%5Cexp%5Cleft(%0A-%5Cfrac%7Bx%5E2+y%5E2%7D%7B2%5Csigma%5E2%7D%0A%5Cright).%0A"></p>
+<p>Gaussian filtering replaces each pixel by a weighted average of nearby pixels.</p>
+<p>The parameter <img src="https://latex.codecogs.com/png.latex?%5Csigma"> controls the smoothing scale.</p>
+<p>Small values preserve fine details.</p>
+<p>Large values suppress more high-frequency variation, but can also blur genuine boundaries.</p>
+<section id="constructing-a-gaussian-kernel" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="constructing-a-gaussian-kernel"><span class="header-section-number">11.1</span> Constructing a Gaussian kernel</h2>
+<div id="gaussian-kernel" class="cell" data-execution_count="8">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> gaussian_kernel(size, sigma):</span>
+<span id="cb9-2">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> size <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>:</span>
+<span id="cb9-3">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Kernel size must be odd"</span>)</span>
+<span id="cb9-4"></span>
+<span id="cb9-5">    radius <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> size <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">//</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span></span>
+<span id="cb9-6">    coords <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.arange(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>radius, radius<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb9-7"></span>
+<span id="cb9-8">    xx, yy <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.meshgrid(coords, coords)</span>
+<span id="cb9-9"></span>
+<span id="cb9-10">    kernel <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.exp(</span>
+<span id="cb9-11">        <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>(xx<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> yy<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span>sigma<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb9-12">    )</span>
+<span id="cb9-13"></span>
+<span id="cb9-14">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> kernel <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> kernel.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>()</span></code></pre></div></div>
+</details>
+</div>
+</section>
+<section id="comparing-noisy-and-smoothed-gradients" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="comparing-noisy-and-smoothed-gradients"><span class="header-section-number">11.2</span> Comparing noisy and smoothed gradients</h2>
+<div id="cell-fig-noise-smoothing" class="cell" data-fig-height="6" data-fig-width="10" data-execution_count="9">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1">rng <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.random.default_rng(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">42</span>)</span>
+<span id="cb10-2">noisy <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> image <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> rng.normal(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.15</span>, image.shape)</span>
+<span id="cb10-3"></span>
+<span id="cb10-4">gkernel <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> gaussian_kernel(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.2</span>)</span>
+<span id="cb10-5"></span>
+<span id="cb10-6">smoothed <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(noisy, gkernel)</span>
+<span id="cb10-7"></span>
+<span id="cb10-8">raw_gx <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(noisy, sobel_x)</span>
+<span id="cb10-9">raw_gy <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(noisy, sobel_y)</span>
+<span id="cb10-10">raw_edges <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.hypot(raw_gx, raw_gy)</span>
+<span id="cb10-11"></span>
+<span id="cb10-12">smooth_gx <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(smoothed, sobel_x)</span>
+<span id="cb10-13">smooth_gy <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> correlate2d(smoothed, sobel_y)</span>
+<span id="cb10-14">smooth_edges <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.hypot(smooth_gx, smooth_gy)</span>
+<span id="cb10-15"></span>
+<span id="cb10-16">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">9</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">6</span>))</span>
+<span id="cb10-17"></span>
+<span id="cb10-18">panels <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [</span>
+<span id="cb10-19">    (noisy, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Noisy image"</span>),</span>
+<span id="cb10-20">    (smoothed, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Gaussian-smoothed image"</span>),</span>
+<span id="cb10-21">    (raw_edges, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Sobel without smoothing"</span>),</span>
+<span id="cb10-22">    (smooth_edges, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Sobel after smoothing"</span>)</span>
+<span id="cb10-23">]</span>
+<span id="cb10-24"></span>
+<span id="cb10-25"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> ax, (data, title) <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">zip</span>(axes.flat, panels):</span>
+<span id="cb10-26">    ax.imshow(data, cmap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gray"</span>)</span>
+<span id="cb10-27">    ax.set_title(title)</span>
+<span id="cb10-28">    ax.axis(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"off"</span>)</span>
+<span id="cb10-29"></span>
+<span id="cb10-30">plt.tight_layout()</span>
+<span id="cb10-31">plt.show()</span></code></pre></div></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-noise-smoothing" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-noise-smoothing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/edge-detection-computer-vision/index_files/figure-html/fig-noise-smoothing-output-1.png" width="854" height="572" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-noise-smoothing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Effect of Gaussian smoothing before edge detection.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Interpretation
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>When comparing gradient maps, use the same intensity range or normalization method. Otherwise, automatic plot scaling can conceal real differences in response strength.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="from-thick-gradients-to-thin-edges" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> From Thick Gradients to Thin Edges</h1>
+<p>A gradient magnitude image frequently contains broad bands around intensity boundaries.</p>
+<p>Ideally, an edge detector should identify a narrow curve near each boundary rather than a thick region.</p>
+<p>This motivates <strong>non-maximum suppression</strong>.</p>
+<p>For every candidate pixel:</p>
+<ol type="1">
+<li>Estimate the gradient direction.</li>
+<li>Compare its magnitude with neighboring samples along that direction.</li>
+<li>Retain the pixel only if it is a local maximum.</li>
+</ol>
+<p>The result is a thinner set of candidate edges.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Implementation detail
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A production implementation should consider interpolation along the gradient direction, handling of equal-valued neighboring pixels, and image boundaries.</p>
+<p>The full implementation will be developed in the companion notebook.</p>
+</div>
+</div>
+</section>
+<section id="the-canny-edge-detection-algorithm" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> The Canny Edge Detection Algorithm</h1>
+<p>Canny combines several operations into a complete edge-detection pipeline.</p>
+<p>The major stages are:</p>
+<ol type="1">
+<li>Gaussian smoothing</li>
+<li>Gradient estimation</li>
+<li>Non-maximum suppression</li>
+<li>Double thresholding</li>
+<li>Edge tracking by hysteresis</li>
+</ol>
+<section id="double-thresholding" class="level2" data-number="13.1">
+<h2 data-number="13.1" class="anchored" data-anchor-id="double-thresholding"><span class="header-section-number">13.1</span> Double thresholding</h2>
+<p>A single threshold can produce either too many noisy detections or too few genuine boundaries.</p>
+<p>Instead, two thresholds are used:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AT_%7B%5Cmathrm%7Blow%7D%7D%3CT_%7B%5Cmathrm%7Bhigh%7D%7D.%0A"></p>
+<p>Pixels with gradient magnitude above the high threshold are classified as strong candidates.</p>
+<p>Pixels between the thresholds are weak candidates.</p>
+<p>Pixels below the low threshold are rejected.</p>
+</section>
+<section id="hysteresis" class="level2" data-number="13.2">
+<h2 data-number="13.2" class="anchored" data-anchor-id="hysteresis"><span class="header-section-number">13.2</span> Hysteresis</h2>
+<p>Weak candidates are retained when connected to strong edges under the chosen neighborhood-connectivity rule.</p>
+<p>This helps preserve continuous boundaries while discarding isolated weak responses.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Interactive experiment planned
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>An interactive Canny demonstration will expose:</p>
+<ul>
+<li>Gaussian smoothing scale</li>
+<li>Low threshold</li>
+<li>High threshold</li>
+<li>Intermediate gradient map</li>
+<li>Non-maximum suppressed edges</li>
+<li>Final hysteresis result</li>
+</ul>
+<p>Readers will be able to observe how each stage changes the result.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="comparing-the-methods" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Comparing the Methods</h1>
+<p>The operators discussed in this article have different strengths and limitations.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Main idea</th>
+<th>Important limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Simple differences</td>
+<td>Estimate first derivatives</td>
+<td>Sensitive to noise</td>
+</tr>
+<tr class="even">
+<td>Prewitt</td>
+<td>Estimate gradients with local averaging</td>
+<td>Limited noise suppression</td>
+</tr>
+<tr class="odd">
+<td>Sobel</td>
+<td>Weighted gradient estimation</td>
+<td>Can produce broad responses</td>
+</tr>
+<tr class="even">
+<td>Laplacian</td>
+<td>Estimate second derivatives</td>
+<td>Highly noise-sensitive</td>
+</tr>
+<tr class="odd">
+<td>Canny</td>
+<td>Multi-stage boundary detection</td>
+<td>Depends on smoothing and threshold choices</td>
+</tr>
+</tbody>
+</table>
+<p>A useful experiment is to apply these methods to exactly the same input and compare the resulting maps.</p>
+<p>For a fair comparison, filter responses must be normalized consistently and any thresholding choices must be documented.</p>
+</section>
+<section id="connection-to-convolutional-neural-networks" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Connection to Convolutional Neural Networks</h1>
+<p>Classical edge detectors use fixed kernels.</p>
+<p>Convolutional neural networks learn filter coefficients from data.</p>
+<p>For example, a learned convolutional filter may respond strongly to a particular orientation, colour transition or local texture.</p>
+<p>Early CNN filters sometimes resemble classical gradient detectors.</p>
+<p>However, CNNs are not restricted to manually designed edge filters.</p>
+<p>Deeper layers can combine local information into more complex representations.</p>
+<p>This provides a connection to a later article:</p>
+<p><strong>What Does a Convolutional Neural Network Actually Learn?</strong></p>
+</section>
+<section id="what-we-have-seen" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> What We Have Seen</h1>
+<p>We started with a simple idea: image boundaries often correspond to changes in intensity.</p>
+<p>From this observation, we developed the following mathematical and computational ideas:</p>
+<ul>
+<li>Derivatives measure local intensity change.</li>
+<li>Finite differences approximate derivatives on digital images.</li>
+<li>Image gradients provide both magnitude and direction.</li>
+<li>Correlation and convolution describe local filtering.</li>
+<li>Sobel and Prewitt estimate image gradients.</li>
+<li>Laplacian operators use second-order derivatives.</li>
+<li>Gaussian smoothing reduces noise sensitivity.</li>
+<li>Canny combines smoothing, gradients, suppression, thresholding and hysteresis.</li>
+</ul>
+<p>The broader lesson is that a useful computer vision algorithm often emerges from combining several simple mathematical operations.</p>
+</section>
+<section id="exercises" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Exercises</h1>
+<p><strong>Exercise 1.</strong> Implement the Prewitt operator using the <code>correlate2d</code> function.</p>
+<p><strong>Exercise 2.</strong> Construct synthetic horizontal, vertical and diagonal edges. Compare the directions returned by the Sobel gradient.</p>
+<p><strong>Exercise 3.</strong> Add different amounts of Gaussian noise. Measure how the gradient response changes.</p>
+<p><strong>Exercise 4.</strong> Implement Gaussian smoothing using separable one-dimensional kernels and compare the output with direct two-dimensional filtering.</p>
+<p><strong>Exercise 5.</strong> Implement zero-crossing detection for the Laplacian response.</p>
+<p><strong>Exercise 6.</strong> Implement non-maximum suppression and compare its output with the original gradient magnitude.</p>
+<p><strong>Exercise 7.</strong> Complete the Canny algorithm using double thresholding and hysteresis.</p>
+</section>
+<section id="references-and-further-reading" class="level1" data-number="18">
+<h1 data-number="18"><span class="header-section-number">18</span> 17. References and Further Reading</h1>
+<ol type="1">
+<li><p>Richard Szeliski, <em>Computer Vision: Algorithms and Applications</em>, 2nd edition, Springer, 2022.</p></li>
+<li><p>John Canny, “A Computational Approach to Edge Detection,” IEEE Transactions on Pattern Analysis and Machine Intelligence, 1986.</p></li>
+<li><p>Rafael C. Gonzalez and Richard E. Woods, <em>Digital Image Processing</em>.</p></li>
+<li><p>David A. Forsyth and Jean Ponce, <em>Computer Vision: A Modern Approach</em>.</p></li>
+</ol>
+<hr>
+<p><em>All numerical demonstrations in this article are intended to be reproducible. The companion notebook will include validation tests, additional experiments and a complete Canny implementation.</em></p>
+
+
+<!-- -->
+
+</section>
+
+ ]]></description>
+  <category>Computer Vision</category>
+  <category>Image Processing</category>
+  <category>Mathematics</category>
+  <category>Python</category>
+  <guid>https://anantkumar.online/posts/edge-detection-computer-vision/</guid>
+  <pubDate>Mon, 19 Oct 2026 18:30:00 GMT</pubDate>
+</item>
+<item>
+  <title>MCMC from Scratch: The Metropolis-Hastings Algorithm</title>
+  <link>https://anantkumar.online/posts/markov-chain/mcmc.html</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>In our previous exploration of Importance Sampling, we saw how strategically altering our sampling distribution could massively reduce the variance of a Monte Carlo estimator. However, we also ran into a hard wall: Importance Sampling demands that we manually design a proposal distribution <img src="https://latex.codecogs.com/png.latex?q(x)"> that closely matches our target distribution <img src="https://latex.codecogs.com/png.latex?p(x)">. In high-dimensional spaces, or when dealing with complex, multimodal geometries, guessing the shape of <img src="https://latex.codecogs.com/png.latex?q(x)"> is functionally impossible.</p>
+<p>When we cannot wrap our target distribution in a static, analytical proposal, we must abandon independent, identically distributed (i.i.d.) sampling altogether. Instead, we let the algorithm find the important regions dynamically.</p>
+<p>This brings us to Markov Chain Monte Carlo (MCMC) and its foundational engine: the Metropolis-Hastings algorithm.</p>
+<section id="the-philosophy-of-the-random-walk" class="level3">
+<h3 class="anchored" data-anchor-id="the-philosophy-of-the-random-walk">The Philosophy of the Random Walk</h3>
+<p>Instead of trying to generate independent samples globally, MCMC builds a sequence of samples where each new sample depends <em>only</em> on the current one. This property is known as a <strong>Markov Chain</strong>.</p>
+<p>The goal of MCMC is to design a Markov Chain that wanders through the sample space in such a way that the amount of time it spends in a given region is exactly proportional to the target density <img src="https://latex.codecogs.com/png.latex?p(x)"> in that region. We want our chain to naturally drift toward areas of high probability and linger there, while occasionally exploring lower-probability valleys.</p>
+<p>To do this, we need a mechanism to propose a move, and a mathematical rule to decide whether to accept or reject that move.</p>
+</section>
+<section id="the-metropolis-hastings-criteria" class="level3">
+<h3 class="anchored" data-anchor-id="the-metropolis-hastings-criteria">The Metropolis-Hastings Criteria</h3>
+<p>The Metropolis-Hastings algorithm requires two components: 1. An unnormalized target distribution <img src="https://latex.codecogs.com/png.latex?%5Ctilde%7Bp%7D(x)">. We don’t need the integration constant, which makes this perfect for Bayesian inference where the posterior is often unnormalized. 2. A proposal distribution <img src="https://latex.codecogs.com/png.latex?q(x'%7Cx)"> that dictates how we jump from our current state <img src="https://latex.codecogs.com/png.latex?x"> to a proposed new state <img src="https://latex.codecogs.com/png.latex?x'">. A common choice is a simple Gaussian random walk centered on the current state: <img src="https://latex.codecogs.com/png.latex?q(x'%7Cx)%20=%20%5Cmathcal%7BN%7D(x,%20%5Csigma%5E2)">.</p>
+<p>At each time step, we propose a jump from <img src="https://latex.codecogs.com/png.latex?x"> to <img src="https://latex.codecogs.com/png.latex?x'">. We then calculate the <strong>acceptance ratio</strong> <img src="https://latex.codecogs.com/png.latex?%5Calpha">:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%5Calpha%20=%20%5Cmin%5Cleft(1,%20%5Cfrac%7B%5Ctilde%7Bp%7D(x')%20q(x%7Cx')%7D%7B%5Ctilde%7Bp%7D(x)%20q(x'%7Cx)%7D%5Cright)"></p>
+<p>If our proposal distribution is symmetric—meaning the probability of jumping from <img src="https://latex.codecogs.com/png.latex?x"> to <img src="https://latex.codecogs.com/png.latex?x'"> is the same as jumping from <img src="https://latex.codecogs.com/png.latex?x'"> to <img src="https://latex.codecogs.com/png.latex?x">, as is the case with a Gaussian—the <img src="https://latex.codecogs.com/png.latex?q"> terms cancel out entirely. The ratio simplifies to the Metropolis acceptance criteria:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%5Calpha%20=%20%5Cmin%5Cleft(1,%20%5Cfrac%7B%5Ctilde%7Bp%7D(x')%7D%7B%5Ctilde%7Bp%7D(x)%7D%5Cright)"></p>
+<p>If the proposed state <img src="https://latex.codecogs.com/png.latex?x'"> has a higher density than the current state <img src="https://latex.codecogs.com/png.latex?x">, then <img src="https://latex.codecogs.com/png.latex?%5Cfrac%7B%5Ctilde%7Bp%7D(x')%7D%7B%5Ctilde%7Bp%7D(x)%7D%20%3E%201">, and <img src="https://latex.codecogs.com/png.latex?%5Calpha%20=%201">. We <strong>always</strong> accept moves that take us to higher probability regions.</p>
+<p>If the proposed state has a <em>lower</em> density, <img src="https://latex.codecogs.com/png.latex?%5Calpha"> will be a fraction between <img src="https://latex.codecogs.com/png.latex?0"> and <img src="https://latex.codecogs.com/png.latex?1">. We accept this downhill move probabilistically. This allowance for downhill movement is critical; it prevents the algorithm from getting permanently stuck in a local maximum, allowing it to explore the entire parameter space.</p>
+</section>
+<section id="implementation-in-python" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-in-python">Implementation in Python</h3>
+<p>Let’s write this from scratch. We will design a target distribution that is highly problematic for basic sampling: a bimodal distribution with two distinct peaks. We only know its unnormalized form.</p>
+<p>```python import numpy as np import matplotlib.pyplot as plt</p>
+<p>np.random.seed(42)</p>
+</section>
+<section id="our-unnormalized-target-distribution-a-bimodal-mixture" class="level1">
+<h1>Our unnormalized target distribution: A bimodal mixture</h1>
+<p>def target_pdf(x): return np.exp(-0.5 * (x - 2)<strong>2) + np.exp(-0.5 * (x + 2)</strong>2)</p>
+<p>def metropolis_hastings(iters, initial_x, step_size): samples = np.zeros(iters) current_x = initial_x accepted = 0</p>
+<pre><code>for i in range(iters):
+    # 1. Propose a new state from a symmetric Gaussian random walk
+    proposed_x = np.random.normal(loc=current_x, scale=step_size)
+    
+    # 2. Calculate the acceptance ratio (symmetric q cancels out)
+    ratio = target_pdf(proposed_x) / target_pdf(current_x)
+    alpha = min(1.0, ratio)
+    
+    # 3. Accept or reject probabilistically
+    if np.random.uniform(0, 1) &lt; alpha:
+        current_x = proposed_x
+        accepted += 1
+        
+    samples[i] = current_x
+    
+print(f"Acceptance Rate: {accepted / iters:.3f}")
+return samples</code></pre>
+</section>
+<section id="run-the-simulation" class="level1">
+<h1>Run the simulation</h1>
+<p>n_iterations = 10000 # A step size of 1.5 allows the chain to jump between the two peaks samples_py = metropolis_hastings(n_iterations, initial_x=0.0, step_size=1.5)</p>
+</section>
+<section id="visualization-trace-plot-and-histogram" class="level1">
+<h1>— Visualization: Trace Plot and Histogram —</h1>
+<p>fig, axes = plt.subplots(1, 2, figsize=(14, 5))</p>
+</section>
+<section id="trace-plot" class="level1">
+<h1>Trace Plot</h1>
+<p>axes[0].plot(samples_py, alpha=0.7, color=‘#2980b9’, linewidth=0.5) axes[0].set_title(“MCMC Trace Plot”, fontsize=14) axes[0].set_xlabel(“Iteration”) axes[0].set_ylabel(“State space (x)”)</p>
+</section>
+<section id="histogram-vs-target-density" class="level1">
+<h1>Histogram vs Target Density</h1>
+<p>x_plot = np.linspace(-6, 6, 500) # Normalize the true target mathematically for plotting comparison y_true = target_pdf(x_plot) / (2 * np.sqrt(2 * np.pi))</p>
+<p>axes[1].hist(samples_py, bins=60, density=True, color=‘#bdc3c7’, edgecolor=‘black’, alpha=0.6, label=“MCMC Samples”) axes[1].plot(x_plot, y_true, color=‘#c0392b’, linewidth=2.5, label=“True Normalized Target”) axes[1].set_title(“Sample Distribution vs Target”, fontsize=14) axes[1].set_xlabel(“x”) axes[1].legend()</p>
+<p>plt.tight_layout() plt.show()</p>
+
+
+</section>
+
+ ]]></description>
+  <category>Data Science</category>
+  <category>Probability</category>
+  <category>Statistical Computing</category>
+  <category>Python</category>
+  <category>R</category>
+  <category>Mathematics</category>
+  <guid>https://anantkumar.online/posts/markov-chain/mcmc.html</guid>
+  <pubDate>Thu, 28 May 2026 18:30:00 GMT</pubDate>
+</item>
 <item>
   <title>Variance Reduction: A Guide to Importance Sampling and Beyond</title>
   <dc:creator>Anant Kumar</dc:creator>

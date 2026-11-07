@@ -81,9 +81,9 @@ ul.task-list li input[type="checkbox"] {
     }
 
     const options = {
-      valueNames: ['listing-date','listing-title','listing-author','listing-image','listing-description','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
+      valueNames: ['listing-date','listing-title','listing-author','listing-subtitle','listing-image','listing-description','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
       
-      searchColumns: ["listing-date","listing-title","listing-author","listing-image","listing-description","listing-categories"],
+      searchColumns: ["listing-date","listing-title","listing-author","listing-subtitle","listing-image","listing-description","listing-categories"],
     };
 
     window['quarto-listings'] = window['quarto-listings'] || {};
@@ -273,6 +273,29 @@ window.Quarto = {
  <span class="menu-text">Generating Other Distributions from Uniform Random Variables</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./posts/edge-detection-computer-vision/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Edge Detection for Computer Vision</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Markov Chain</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth3 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./posts/markov-chain/mcmc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MCMC from Scratch: The Metropolis-Hastings Algorithm</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
       </ul>
   </li>
       </ul>
@@ -284,7 +307,7 @@ window.Quarto = {
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
         
-    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(7)</span></div><div class="category" data-category="Qw==">C <span class="quarto-category-count">(1)</span></div><div class="category" data-category="RGF0YSUyMFNjaWVuY2U=">Data Science <span class="quarto-category-count">(2)</span></div><div class="category" data-category="SFBD">HPC <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TGFUZVg=">LaTeX <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TENHcw==">LCGs <span class="quarto-category-count">(2)</span></div><div class="category" data-category="TGluZWFyJTIwQWxnZWJyYQ==">Linear Algebra <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TWF0aGVtYXRpY3M=">Mathematics <span class="quarto-category-count">(3)</span></div><div class="category" data-category="T3B0aW1pemF0aW9u">Optimization <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHJvYmFiaWxpdHk=">Probability <span class="quarto-category-count">(2)</span></div><div class="category" data-category="UHNldWRvcmFuZG9tbmVzcw==">Pseudorandomness <span class="quarto-category-count">(2)</span></div><div class="category" data-category="UHl0aG9u">Python <span class="quarto-category-count">(4)</span></div><div class="category" data-category="Ug==">R <span class="quarto-category-count">(2)</span></div><div class="category" data-category="UmFuZG9tbmVzcw==">Randomness <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U3RhdGlzdGljYWwlMjBDb21wdXRpbmc=">Statistical Computing <span class="quarto-category-count">(3)</span></div><div class="category" data-category="U3RhdGlzdGljcw==">Statistics <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VW5pZm9ybSUyMERpc3RyaWJ1dGlvbg==">Uniform Distribution <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VmlzdWFsaXphdGlvbg==">Visualization <span class="quarto-category-count">(1)</span></div></div></div>
+    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(9)</span></div><div class="category" data-category="Qw==">C <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Q29tcHV0ZXIlMjBWaXNpb24=">Computer Vision <span class="quarto-category-count">(1)</span></div><div class="category" data-category="RGF0YSUyMFNjaWVuY2U=">Data Science <span class="quarto-category-count">(3)</span></div><div class="category" data-category="SFBD">HPC <span class="quarto-category-count">(1)</span></div><div class="category" data-category="SW1hZ2UlMjBQcm9jZXNzaW5n">Image Processing <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TGFUZVg=">LaTeX <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TENHcw==">LCGs <span class="quarto-category-count">(2)</span></div><div class="category" data-category="TGluZWFyJTIwQWxnZWJyYQ==">Linear Algebra <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TWF0aGVtYXRpY3M=">Mathematics <span class="quarto-category-count">(5)</span></div><div class="category" data-category="T3B0aW1pemF0aW9u">Optimization <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UHJvYmFiaWxpdHk=">Probability <span class="quarto-category-count">(3)</span></div><div class="category" data-category="UHNldWRvcmFuZG9tbmVzcw==">Pseudorandomness <span class="quarto-category-count">(2)</span></div><div class="category" data-category="UHl0aG9u">Python <span class="quarto-category-count">(6)</span></div><div class="category" data-category="Ug==">R <span class="quarto-category-count">(3)</span></div><div class="category" data-category="UmFuZG9tbmVzcw==">Randomness <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U3RhdGlzdGljYWwlMjBDb21wdXRpbmc=">Statistical Computing <span class="quarto-category-count">(4)</span></div><div class="category" data-category="U3RhdGlzdGljcw==">Statistics <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VW5pZm9ybSUyMERpc3RyaWJ1dGlvbg==">Uniform Distribution <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VmlzdWFsaXphdGlvbg==">Visualization <span class="quarto-category-count">(1)</span></div></div></div>
 <!-- main -->
 <main class="content quarto-banner-title-block column-body" id="quarto-document-content">
 
@@ -298,7 +321,86 @@ window.Quarto = {
 
 <div class="quarto-listing quarto-listing-container-default" id="listing-listing">
 <div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="RGF0YSUyMFNjaWVuY2UlMkNQcm9iYWJpbGl0eSUyQ1N0YXRpc3RpY2FsJTIwQ29tcHV0aW5nJTJDUHl0aG9uJTJDTWF0aGVtYXRpY3M=" data-listing-date-sort="1779388200000" data-listing-file-modified-sort="1779390331213" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="11" data-listing-word-count-sort="2056">
+<div class="quarto-post image-right" data-index="0" data-categories="Q29tcHV0ZXIlMjBWaXNpb24lMkNJbWFnZSUyMFByb2Nlc3NpbmclMkNNYXRoZW1hdGljcyUyQ1B5dGhvbg==" data-listing-date-sort="1792434600000" data-listing-file-modified-sort="1792593475495" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="12" data-listing-word-count-sort="2214">
+<div class="thumbnail"><a href="./posts/edge-detection-computer-vision/index.html" class="no-external">
+
+<p class="card-img-top"><img src="posts/edge-detection-computer-vision/index_files/figure-html/fig-synthetic-edge-output-1.png"  class="thumbnail-image card-img"/></p>
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./posts/edge-detection-computer-vision/index.html" class="no-external">Edge Detection for Computer Vision</a>
+</h3>
+<div class="listing-subtitle">
+<a href="./posts/edge-detection-computer-vision/index.html" class="no-external">From Image Gradients to Sobel, Laplacian, and Canny</a>
+</div>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Q29tcHV0ZXIlMjBWaXNpb24='); return false;">Computer Vision</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('SW1hZ2UlMjBQcm9jZXNzaW5n'); return false;">Image Processing</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('TWF0aGVtYXRpY3M='); return false;">Mathematics</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('UHl0aG9u'); return false;">Python</div>
+
+</div>
+<div class="delink listing-description"><a href="./posts/edge-detection-computer-vision/index.html" class="no-external">
+<p>Understanding edge detection from first principles: derivatives, convolution, gradient operators, noise, Gaussian smoothing and the Canny algorithm.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./posts/edge-detection-computer-vision/index.html" class="no-external">
+<div class="listing-date">
+Oct 20, 2026
+</div>
+<div class="listing-author">
+Anant Kumar
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="1" data-categories="RGF0YSUyMFNjaWVuY2UlMkNQcm9iYWJpbGl0eSUyQ1N0YXRpc3RpY2FsJTIwQ29tcHV0aW5nJTJDUHl0aG9uJTJDUiUyQ01hdGhlbWF0aWNz" data-listing-date-sort="1779993000000" data-listing-file-modified-sort="1779472220990" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="5" data-listing-word-count-sort="841">
+<div class="thumbnail"><a href="./posts/markov-chain/mcmc.html" class="no-external">
+
+<div class="listing-item-img-placeholder card-img-top" >&nbsp;</div>
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./posts/markov-chain/mcmc.html" class="no-external">MCMC from Scratch: The Metropolis-Hastings Algorithm</a>
+</h3>
+<div class="listing-subtitle">
+<a href="./posts/markov-chain/mcmc.html" class="no-external"></a>
+</div>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('RGF0YSUyMFNjaWVuY2U='); return false;">Data Science</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('UHJvYmFiaWxpdHk='); return false;">Probability</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('U3RhdGlzdGljYWwlMjBDb21wdXRpbmc='); return false;">Statistical Computing</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('UHl0aG9u'); return false;">Python</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('Ug=='); return false;">R</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('TWF0aGVtYXRpY3M='); return false;">Mathematics</div>
+
+</div>
+<div class="delink listing-description"><a href="./posts/markov-chain/mcmc.html" class="no-external">
+In our previous exploration of Importance Sampling, we saw how strategically altering our sampling distribution could massively reduce the variance of a Monte Carlo…<span class="math inline"></span><span class="math inline"></span><span class="math inline"></span>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./posts/markov-chain/mcmc.html" class="no-external">
+<div class="listing-date">
+May 29, 2026
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="2" data-categories="RGF0YSUyMFNjaWVuY2UlMkNQcm9iYWJpbGl0eSUyQ1N0YXRpc3RpY2FsJTIwQ29tcHV0aW5nJTJDUHl0aG9uJTJDTWF0aGVtYXRpY3M=" data-listing-date-sort="1779388200000" data-listing-file-modified-sort="1779418322698" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="11" data-listing-word-count-sort="2056">
 <div class="thumbnail"><a href="./posts/importance-sampling/index.html" class="no-external">
 
 <img loading="lazy" src="./posts/importance-sampling/images/importance_sampling.png" class="thumbnail-image">
@@ -308,6 +410,9 @@ window.Quarto = {
 <h3 class="no-anchor listing-title">
 <a href="./posts/importance-sampling/index.html" class="no-external">Variance Reduction: A Guide to Importance Sampling and Beyond</a>
 </h3>
+<div class="listing-subtitle">
+<a href="./posts/importance-sampling/index.html" class="no-external"></a>
+</div>
 <div class="listing-categories">
 
 <div class="listing-category" onclick="window.quartoListingCategory('RGF0YSUyMFNjaWVuY2U='); return false;">Data Science</div>
@@ -336,7 +441,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="1" data-categories="VW5pZm9ybSUyMERpc3RyaWJ1dGlvbiUyQ1BzZXVkb3JhbmRvbW5lc3MlMkNMQ0dzJTJDU3RhdGlzdGljYWwlMjBDb21wdXRpbmclMkNQeXRob24lMkNS" data-listing-date-sort="1771612200000" data-listing-file-modified-sort="1776019388532" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="9" data-listing-word-count-sort="1615">
+<div class="quarto-post image-right" data-index="3" data-categories="VW5pZm9ybSUyMERpc3RyaWJ1dGlvbiUyQ1BzZXVkb3JhbmRvbW5lc3MlMkNMQ0dzJTJDU3RhdGlzdGljYWwlMjBDb21wdXRpbmclMkNQeXRob24lMkNS" data-listing-date-sort="1771612200000" data-listing-file-modified-sort="1776019388532" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="9" data-listing-word-count-sort="1615">
 <div class="thumbnail"><a href="./posts/generating-other-dist/index.html" class="no-external">
 
 <img loading="lazy" src="./posts/generating-other-dist/images/uniform_normal_exp.png" class="thumbnail-image">
@@ -346,6 +451,9 @@ Anant Kumar
 <h3 class="no-anchor listing-title">
 <a href="./posts/generating-other-dist/index.html" class="no-external">Generating Other Distributions from Uniform Random Variables</a>
 </h3>
+<div class="listing-subtitle">
+<a href="./posts/generating-other-dist/index.html" class="no-external"></a>
+</div>
 <div class="listing-categories">
 
 <div class="listing-category" onclick="window.quartoListingCategory('VW5pZm9ybSUyMERpc3RyaWJ1dGlvbg=='); return false;">Uniform Distribution</div>
@@ -376,7 +484,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="2" data-categories="UmFuZG9tbmVzcyUyQ1BzZXVkb3JhbmRvbW5lc3MlMkNMQ0dzJTJDU3RhdGlzdGljYWwlMjBDb21wdXRpbmc=" data-listing-date-sort="1771525800000" data-listing-file-modified-sort="1771692168054" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="10" data-listing-word-count-sort="1825">
+<div class="quarto-post image-right" data-index="4" data-categories="UmFuZG9tbmVzcyUyQ1BzZXVkb3JhbmRvbW5lc3MlMkNMQ0dzJTJDU3RhdGlzdGljYWwlMjBDb21wdXRpbmc=" data-listing-date-sort="1771525800000" data-listing-file-modified-sort="1771692168054" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="10" data-listing-word-count-sort="1825">
 <div class="thumbnail"><a href="./posts/pseudorandom-num-generators/index.html" class="no-external">
 
 <img loading="lazy" src="./posts/pseudorandom-num-generators/images/rand_hidden_corelations.png" class="thumbnail-image">
@@ -386,6 +494,9 @@ Anant Kumar
 <h3 class="no-anchor listing-title">
 <a href="./posts/pseudorandom-num-generators/index.html" class="no-external">Pseudorandom Number Generators: Linear Congruential Generators</a>
 </h3>
+<div class="listing-subtitle">
+<a href="./posts/pseudorandom-num-generators/index.html" class="no-external"></a>
+</div>
 <div class="listing-categories">
 
 <div class="listing-category" onclick="window.quartoListingCategory('UmFuZG9tbmVzcw=='); return false;">Randomness</div>
@@ -412,7 +523,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="3" data-categories="UiUyQ0xhVGVYJTJDU3RhdGlzdGljcyUyQ0RhdGElMjBTY2llbmNl" data-listing-date-sort="1771439400000" data-listing-file-modified-sort="1771610843031" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="746">
+<div class="quarto-post image-right" data-index="5" data-categories="UiUyQ0xhVGVYJTJDU3RhdGlzdGljcyUyQ0RhdGElMjBTY2llbmNl" data-listing-date-sort="1771439400000" data-listing-file-modified-sort="1771610843031" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="746">
 <div class="thumbnail"><a href="./posts/integrating-R-and-latex/index.html" class="no-external">
 
 <img loading="lazy" src="./posts/integrating-R-and-latex/images/r_latex.png" class="thumbnail-image">
@@ -422,6 +533,9 @@ Anant Kumar
 <h3 class="no-anchor listing-title">
 <a href="./posts/integrating-R-and-latex/index.html" class="no-external">Integrating R with LaTeX using <code>knitr</code></a>
 </h3>
+<div class="listing-subtitle">
+<a href="./posts/integrating-R-and-latex/index.html" class="no-external"></a>
+</div>
 <div class="listing-categories">
 
 <div class="listing-category" onclick="window.quartoListingCategory('Ug=='); return false;">R</div>
@@ -448,7 +562,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="4" data-categories="TWF0aGVtYXRpY3MlMkNQcm9iYWJpbGl0eSUyQ1B5dGhvbg==" data-listing-date-sort="1770748200000" data-listing-file-modified-sort="1770834058162" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="5" data-listing-word-count-sort="806">
+<div class="quarto-post image-right" data-index="6" data-categories="TWF0aGVtYXRpY3MlMkNQcm9iYWJpbGl0eSUyQ1B5dGhvbg==" data-listing-date-sort="1770748200000" data-listing-file-modified-sort="1770834058162" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="5" data-listing-word-count-sort="806">
 <div class="thumbnail"><a href="./posts/monte-carlo-random-stick-break/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/monte-carlo-random-stick-break/images/sample_space.png" alt="Sample space"  class="thumbnail-image card-img"/></p>
@@ -458,6 +572,9 @@ Anant Kumar
 <h3 class="no-anchor listing-title">
 <a href="./posts/monte-carlo-random-stick-break/index.html" class="no-external">Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation</a>
 </h3>
+<div class="listing-subtitle">
+<a href="./posts/monte-carlo-random-stick-break/index.html" class="no-external"></a>
+</div>
 <div class="listing-categories">
 
 <div class="listing-category" onclick="window.quartoListingCategory('TWF0aGVtYXRpY3M='); return false;">Mathematics</div>
@@ -482,7 +599,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="5" data-categories="QyUyQ0hQQyUyQ0xpbmVhciUyMEFsZ2VicmElMkNPcHRpbWl6YXRpb24=" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1770827612624" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="7" data-listing-word-count-sort="1327">
+<div class="quarto-post image-right" data-index="7" data-categories="QyUyQ0hQQyUyQ0xpbmVhciUyMEFsZ2VicmElMkNPcHRpbWl6YXRpb24=" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1770827612624" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="7" data-listing-word-count-sort="1327">
 <div class="thumbnail"><a href="./posts/matrix-multiplication-benchmarking/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/matrix-multiplication-benchmarking/images/matmul_performance.png" alt="Comparison of various methods of Matrix Multiplication"  class="thumbnail-image card-img"/></p>
@@ -492,6 +609,9 @@ Anant Kumar
 <h3 class="no-anchor listing-title">
 <a href="./posts/matrix-multiplication-benchmarking/index.html" class="no-external">From Scratch: Optimizing Matrix Multiplication in C</a>
 </h3>
+<div class="listing-subtitle">
+<a href="./posts/matrix-multiplication-benchmarking/index.html" class="no-external"></a>
+</div>
 <div class="listing-categories">
 
 <div class="listing-category" onclick="window.quartoListingCategory('Qw=='); return false;">C</div>
@@ -518,7 +638,7 @@ Anant Kumar
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="6" data-categories="TWF0aGVtYXRpY3MlMkNQeXRob24lMkNWaXN1YWxpemF0aW9u" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1771242110753" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="627">
+<div class="quarto-post image-right" data-index="8" data-categories="TWF0aGVtYXRpY3MlMkNQeXRob24lMkNWaXN1YWxpemF0aW9u" data-listing-date-sort="1769365800000" data-listing-file-modified-sort="1771242110753" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-word-count-sort="627">
 <div class="thumbnail"><a href="./posts/contour-plots/index.html" class="no-external">
 
 <p class="card-img-top"><img src="posts/contour-plots/index_files/figure-html/cell-4-output-1.png"  class="thumbnail-image card-img"/></p>
@@ -528,6 +648,9 @@ Anant Kumar
 <h3 class="no-anchor listing-title">
 <a href="./posts/contour-plots/index.html" class="no-external">Visualizing Functions with Contour Plots</a>
 </h3>
+<div class="listing-subtitle">
+<a href="./posts/contour-plots/index.html" class="no-external"></a>
+</div>
 <div class="listing-categories">
 
 <div class="listing-category" onclick="window.quartoListingCategory('TWF0aGVtYXRpY3M='); return false;">Mathematics</div>

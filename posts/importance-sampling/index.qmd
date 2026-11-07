@@ -97,7 +97,7 @@ With 100,000 samples, this script confidently output an estimate of `{r} mc_esti
 
 ### The Breaking Point
 
-Following our exploration of generating standard distributions and utilizing basic Monte Carlo methods, it becomes necessary to address a fundamental limitation of naive random sampling: variance. 
+Following our exploration of generating standard distributions and utilizing basic Monte Carlo methods, it becomes necessary to address a fundamental limitation of naive random sampling: **variance**. 
 
 When estimating the expected value of a function, a standard Monte Carlo simulation works beautifully if the regions of interest are uniformly distributed. However, what happens when we need to estimate the probability of a rare event, or integrate a function that has narrow, high-frequency peaks? A naive uniform sample will spend most of its computational cycles evaluating regions that contribute almost nothing to the final result.
 

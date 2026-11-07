@@ -1,0 +1,922 @@
+
+---
+title: "Edge Detection for Computer Vision"
+subtitle: "From Image Gradients to Sobel, Laplacian, and Canny"
+description: >-
+  Understanding edge detection from first principles:
+  derivatives, convolution, gradient operators, noise,
+  Gaussian smoothing and the Canny algorithm.
+author: "Anant Kumar"
+date: "2026-10-20"
+categories:
+  - Computer Vision
+  - Image Processing
+  - Mathematics
+  - Python
+toc: true
+toc-depth: 3
+number-sections: true
+code-fold: true
+code-tools: true
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+jupyter: python3
+---
+
+::: {.callout-note}
+## Prerequisites
+
+Basic Python, NumPy arrays, elementary calculus and
+matrix operations.
+
+**What shall we explore:** How local changes in image
+intensity can reveal edges, how derivative filters work,
+and why Canny combines several operations rather than
+relying on a single filter.
+:::
+
+# Introduction
+
+Consider a photograph of a building. Even after removing
+much of its colour and texture, the outline of its walls,
+windows and roof can remain recognizable.
+
+This observation suggests an interesting question:
+
+**How much of the information needed to understand an
+image is contained in its boundaries?**
+
+Edges are useful because they often mark changes in
+surface geometry, illumination, reflectance or object
+identity.
+
+However, not every intensity change corresponds to a
+physical object boundary. Shadows, textures, highlights
+and noise can also create strong responses.
+
+In this article, we will investigate how a computer can
+detect these changes using elementary mathematics.
+
+We will gradually build an edge detector, beginning with
+one-dimensional signals and ending with the main stages
+of the Canny algorithm.
+
+# Understanding an Image as a Function
+
+A grayscale image can be represented as a function
+
+$$
+I(x,y):\mathbb{R}^2\rightarrow\mathbb{R},
+$$
+
+where $I(x,y)$ denotes intensity at position $(x,y)$.
+
+In a digital image, we only observe samples on a discrete
+pixel grid.
+
+For an image of height $H$ and width $W$, we use a matrix
+
+$$
+I\in\mathbb{R}^{H\times W}.
+$$
+
+For an 8-bit grayscale image, intensities commonly range
+from 0 to 255.
+
+Let us construct a simple image containing a vertical
+intensity boundary.
+
+```{python}
+#| label: fig-synthetic-edge
+#| fig-cap: "A synthetic image containing a vertical step edge."
+#| fig-width: 7
+#| fig-height: 3
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+image = np.zeros((100, 160), dtype=float)
+image[:, 80:] = 1.0
+
+fig, ax = plt.subplots()
+ax.imshow(image, cmap="gray", vmin=0, vmax=1)
+ax.set_title("A vertical intensity boundary")
+ax.set_xlabel("Horizontal pixel coordinate")
+ax.set_ylabel("Vertical pixel coordinate")
+plt.show()
+```
+
+The brightness jumps from zero to one at the boundary.
+
+Our objective is to identify this transition
+mathematically.
+
+# What Exactly Is an Edge?
+
+A useful model of an edge is a region where image
+intensity changes rapidly.
+
+Different physical situations produce different
+intensity profiles.
+
+## Step edges
+
+An ideal step edge can be represented by
+
+$$
+f(x)=
+\begin{cases}
+0, & x<0,\\
+1, & x\geq0.
+\end{cases}
+$$
+
+Its intensity changes abruptly.
+
+## Ramp edges
+
+Real optical systems blur sharp boundaries. As a
+result, an abrupt step may become a gradual ramp.
+
+## Roof edges
+
+A thin bright line on a dark background can produce
+a roof-shaped intensity profile.
+
+The distinction matters because first and second
+derivatives respond differently to these profiles.
+
+```{python}
+#| label: fig-edge-profiles
+#| fig-cap: "Examples of step, ramp and roof intensity profiles."
+#| fig-width: 9
+#| fig-height: 3
+
+x = np.linspace(-5, 5, 401)
+
+step = (x >= 0).astype(float)
+ramp = np.clip((x + 1) / 2, 0, 1)
+roof = np.maximum(0, 1 - np.abs(x) / 2)
+
+fig, axes = plt.subplots(1, 3, figsize=(10, 3))
+
+for ax, values, title in zip(
+    axes,
+    [step, ramp, roof],
+    ["Step edge", "Ramp edge", "Roof edge"]
+):
+    ax.plot(x, values)
+    ax.set_title(title)
+    ax.set_xlabel("Position")
+    ax.set_ylabel("Intensity")
+    ax.grid(alpha=0.25)
+
+plt.tight_layout()
+plt.show()
+```
+
+# Detecting Edges Using Derivatives
+
+The derivative measures how rapidly a function changes.
+
+For a continuous one-dimensional intensity function,
+
+$$
+f'(x)=\lim_{h\rightarrow0}
+\frac{f(x+h)-f(x)}{h}.
+$$
+
+A large derivative magnitude indicates rapid variation.
+
+## Discrete derivatives
+
+Digital images contain sampled values, so we approximate
+derivatives using finite differences.
+
+The forward difference is
+
+$$
+f'(x)\approx\frac{f(x+h)-f(x)}{h}.
+$$
+
+The central difference is
+
+$$
+f'(x)\approx
+\frac{f(x+h)-f(x-h)}{2h}.
+$$
+
+For unit pixel spacing, $h=1$.
+
+```{python}
+#| label: fig-discrete-derivatives
+#| fig-cap: "A sampled step edge and its numerical derivatives."
+#| fig-width: 8
+#| fig-height: 5
+
+x = np.arange(100)
+signal = (x >= 50).astype(float)
+
+forward = np.diff(signal, append=signal[-1])
+central = np.zeros_like(signal)
+central[1:-1] = (signal[2:] - signal[:-2]) / 2
+
+fig, axes = plt.subplots(2, 1, sharex=True)
+
+axes[0].plot(x, signal)
+axes[0].set_ylabel("Intensity")
+axes[0].set_title("Step signal")
+
+axes[1].plot(x, forward, label="Forward difference")
+axes[1].plot(x, central, label="Central difference",
+             linestyle="--")
+axes[1].set_ylabel("Derivative")
+axes[1].set_xlabel("Position")
+axes[1].legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+**Observation:** The derivative becomes large near the
+intensity boundary and remains zero in constant regions.
+
+This is the central idea behind gradient-based edge
+detection.
+
+# Extending Derivatives to Two Dimensions
+
+A two-dimensional image can change in two independent
+directions.
+
+The partial derivatives are
+
+$$
+G_x=\frac{\partial I}{\partial x},
+\qquad
+G_y=\frac{\partial I}{\partial y}.
+$$
+
+Together, they form the image gradient:
+
+$$
+\nabla I=
+\begin{bmatrix}
+G_x\\
+G_y
+\end{bmatrix}.
+$$
+
+The magnitude of the gradient is
+
+$$
+G(x,y)=\sqrt{G_x^2+G_y^2}.
+$$
+
+The gradient orientation is
+
+$$
+\theta(x,y)= \tan^{-1}\frac{G_y}{G_x} %\operatorname{atan2}(G_y,G_x).
+$$
+
+The gradient points in the direction of maximum
+local intensity increase.
+
+The direction of the edge itself is perpendicular
+to the gradient direction.
+
+::: {.callout-important}
+## Coordinate convention
+
+In standard mathematical coordinates, $y$ increases
+upward. In most image arrays, row indices increase
+downward.
+
+Consequently, the sign and interpretation of the
+vertical derivative depend on the coordinate convention.
+
+Throughout the numerical experiments, we use image-array
+coordinates unless stated otherwise.
+:::
+
+# Correlation and Convolution
+
+Before applying image filters, we need to understand
+how a small matrix, called a kernel, operates on an image.
+
+## Cross-correlation
+
+For an image $I$ and kernel $K$, discrete
+cross-correlation can be written as
+
+$$
+(I\star K)[i,j]
+=
+\sum_{m,n}I[i+m,j+n]K[m,n].
+$$
+
+The kernel is moved across the image, and a weighted sum
+of neighboring pixel values is computed.
+
+## Convolution
+
+Mathematical convolution reverses the kernel indices:
+
+$$
+(I*K)[i,j]
+=
+\sum_{m,n}I[i-m,j-n]K[m,n].
+$$
+
+For finite arrays, the exact summation limits and
+boundary behavior depend on the padding convention.
+
+For a symmetric kernel, correlation and convolution
+produce the same result.
+
+For an asymmetric derivative kernel, their outputs
+can differ in sign.
+
+## NumPy implementation
+
+The following function performs valid cross-correlation
+without using a filtering library.
+
+```{python}
+#| label: correlation-implementation
+
+def correlate2d(image, kernel):
+    image = np.asarray(image, dtype=float)
+    kernel = np.asarray(kernel, dtype=float)
+
+    if image.ndim != 2 or kernel.ndim != 2:
+        raise ValueError("Expected two-dimensional arrays")
+
+    h, w = image.shape
+    kh, kw = kernel.shape
+
+    if kh > h or kw > w:
+        raise ValueError("Kernel is larger than image")
+
+    output = np.zeros((h-kh+1, w-kw+1))
+
+    for i in range(output.shape[0]):
+        for j in range(output.shape[1]):
+            patch = image[i:i+kh, j:j+kw]
+            output[i,j] = np.sum(patch * kernel)
+
+    return output
+
+
+def convolve2d(image, kernel):
+    kernel = np.asarray(kernel, dtype=float)
+    return correlate2d(image, kernel[::-1, ::-1])
+```
+
+We can verify the difference using an asymmetric kernel.
+
+```{python}
+small_image = np.arange(25).reshape(5, 5)
+
+kernel = np.array([
+    [-1, 0, 1],
+    [-2, 0, 2],
+    [-1, 0, 1]
+])
+
+print("Correlation:")
+print(correlate2d(small_image, kernel))
+
+print("\nConvolution:")
+print(convolve2d(small_image, kernel))
+```
+
+::: {.callout-tip}
+## Experiment
+
+Replace the asymmetric kernel with a symmetric Gaussian
+kernel. What happens to the difference between
+convolution and correlation?
+:::
+
+# First-Order Edge Operators
+
+We can estimate horizontal and vertical intensity
+gradients using discrete derivative filters.
+
+Simple central-difference kernels are
+
+$$
+D_x=\frac12
+\begin{bmatrix}-1&0&1\end{bmatrix}
+$$
+
+and
+
+$$
+D_y=\frac12
+\begin{bmatrix}-1\\0\\1\end{bmatrix}.
+$$
+
+These operators respond to changes along their
+respective axes.
+
+However, simple derivatives are sensitive to noise.
+
+This motivates combining derivative estimation with
+local smoothing.
+
+# Sobel and Prewitt Operators
+
+## Sobel operator
+
+Using the image-coordinate convention, the Sobel
+cross-correlation kernels are
+
+$$
+S_x=
+\begin{bmatrix}
+-1&0&1\\
+-2&0&2\\
+-1&0&1
+\end{bmatrix}
+$$
+
+and
+
+$$
+S_y=
+\begin{bmatrix}
+-1&-2&-1\\
+0&0&0\\
+1&2&1
+\end{bmatrix}.
+$$
+
+The Sobel operator combines differentiation in one
+direction with weighted averaging in the perpendicular
+direction.
+
+## Prewitt operator
+
+The corresponding Prewitt kernels are
+
+$$
+P_x=
+\begin{bmatrix}
+-1&0&1\\
+-1&0&1\\
+-1&0&1
+\end{bmatrix},
+\quad
+P_y=
+\begin{bmatrix}
+-1&-1&-1\\
+0&0&0\\
+1&1&1
+\end{bmatrix}.
+$$
+
+Both operators estimate local image gradients.
+
+Sobel places greater weight on the central row or
+column, providing a degree of smoothing.
+
+## Numerical experiment
+
+```{python}
+#| label: fig-sobel
+#| fig-cap: "Horizontal and vertical Sobel responses to a synthetic edge."
+#| fig-width: 10
+#| fig-height: 3
+
+sobel_x = np.array([
+    [-1, 0, 1],
+    [-2, 0, 2],
+    [-1, 0, 1]
+])
+
+sobel_y = np.array([
+    [-1, -2, -1],
+    [ 0,  0,  0],
+    [ 1,  2,  1]
+])
+
+gx = correlate2d(image, sobel_x)
+gy = correlate2d(image, sobel_y)
+
+magnitude = np.hypot(gx, gy)
+
+fig, axes = plt.subplots(1, 3, figsize=(10, 3))
+
+for ax, data, title in zip(
+    axes,
+    [gx, gy, magnitude],
+    ["Horizontal gradient", "Vertical gradient",
+     "Gradient magnitude"]
+):
+    ax.imshow(data, cmap="gray")
+    ax.set_title(title)
+    ax.axis("off")
+
+plt.tight_layout()
+plt.show()
+```
+
+**Questions to investigate:**
+
+- Why is the vertical boundary prominent in $G_x$?
+- Why is $G_y$ approximately zero?
+- What happens if the image contains a horizontal edge?
+- What happens for an edge inclined at $45^\circ$?
+
+# Second-Order Derivatives: The Laplacian
+
+The Laplacian is the sum of second partial derivatives:
+
+$$
+\nabla^2I=
+\frac{\partial^2I}{\partial x^2}
++
+\frac{\partial^2I}{\partial y^2}.
+$$
+
+A common discrete approximation is
+
+$$
+L=
+\begin{bmatrix}
+0&1&0\\
+1&-4&1\\
+0&1&0
+\end{bmatrix}.
+$$
+
+An eight-neighbor variant is
+
+$$
+L_8=
+\begin{bmatrix}
+1&1&1\\
+1&-8&1\\
+1&1&1
+\end{bmatrix}.
+$$
+
+Unlike gradient magnitude, Laplacian responses are
+signed.
+
+Edges can be identified by examining appropriate
+zero crossings of the second derivative.
+
+Simply taking the absolute value of the Laplacian
+produces a response map, but is not equivalent to
+zero-crossing edge detection.
+
+```{python}
+#| label: fig-laplacian
+#| fig-cap: "Laplacian response and its magnitude."
+#| fig-width: 8
+#| fig-height: 3
+
+laplacian_kernel = np.array([
+    [0,  1, 0],
+    [1, -4, 1],
+    [0,  1, 0]
+])
+
+lap_response = correlate2d(image, laplacian_kernel)
+
+fig, axes = plt.subplots(1, 2, figsize=(8, 3))
+
+axes[0].imshow(lap_response, cmap="coolwarm")
+axes[0].set_title("Signed Laplacian")
+
+axes[1].imshow(np.abs(lap_response), cmap="gray")
+axes[1].set_title("Laplacian magnitude")
+
+for ax in axes:
+    ax.axis("off")
+
+plt.tight_layout()
+plt.show()
+```
+
+# Why Noise Creates False Edges
+
+Numerical differentiation emphasizes rapid changes.
+
+Unfortunately, random noise also produces rapid
+intensity variations.
+
+Consider a noisy image:
+
+$$
+I_{\mathrm{noisy}}(x,y)
+=
+I(x,y)+\eta(x,y),
+$$
+
+where $\eta$ is a random noise process.
+
+Derivative filters operate on both the image and
+the noise.
+
+For this reason, edge-detection algorithms often
+smooth the image before computing derivatives.
+
+# Gaussian Smoothing
+
+The two-dimensional Gaussian function is
+
+$$
+G_\sigma(x,y)=
+\frac{1}{2\pi\sigma^2}
+\exp\left(
+-\frac{x^2+y^2}{2\sigma^2}
+\right).
+$$
+
+Gaussian filtering replaces each pixel by a weighted
+average of nearby pixels.
+
+The parameter $\sigma$ controls the smoothing scale.
+
+Small values preserve fine details.
+
+Large values suppress more high-frequency variation,
+but can also blur genuine boundaries.
+
+## Constructing a Gaussian kernel
+
+```{python}
+#| label: gaussian-kernel
+
+def gaussian_kernel(size, sigma):
+    if size % 2 == 0:
+        raise ValueError("Kernel size must be odd")
+
+    radius = size // 2
+    coords = np.arange(-radius, radius+1)
+
+    xx, yy = np.meshgrid(coords, coords)
+
+    kernel = np.exp(
+        -(xx**2 + yy**2)/(2*sigma**2)
+    )
+
+    return kernel / kernel.sum()
+```
+
+## Comparing noisy and smoothed gradients
+
+```{python}
+#| label: fig-noise-smoothing
+#| fig-cap: "Effect of Gaussian smoothing before edge detection."
+#| fig-width: 10
+#| fig-height: 6
+
+rng = np.random.default_rng(42)
+noisy = image + rng.normal(0, 0.15, image.shape)
+
+gkernel = gaussian_kernel(7, 1.2)
+
+smoothed = correlate2d(noisy, gkernel)
+
+raw_gx = correlate2d(noisy, sobel_x)
+raw_gy = correlate2d(noisy, sobel_y)
+raw_edges = np.hypot(raw_gx, raw_gy)
+
+smooth_gx = correlate2d(smoothed, sobel_x)
+smooth_gy = correlate2d(smoothed, sobel_y)
+smooth_edges = np.hypot(smooth_gx, smooth_gy)
+
+fig, axes = plt.subplots(2, 2, figsize=(9, 6))
+
+panels = [
+    (noisy, "Noisy image"),
+    (smoothed, "Gaussian-smoothed image"),
+    (raw_edges, "Sobel without smoothing"),
+    (smooth_edges, "Sobel after smoothing")
+]
+
+for ax, (data, title) in zip(axes.flat, panels):
+    ax.imshow(data, cmap="gray")
+    ax.set_title(title)
+    ax.axis("off")
+
+plt.tight_layout()
+plt.show()
+```
+
+::: {.callout-note}
+## Interpretation
+
+When comparing gradient maps, use the same intensity
+range or normalization method. Otherwise, automatic
+plot scaling can conceal real differences in response
+strength.
+:::
+
+# From Thick Gradients to Thin Edges
+
+A gradient magnitude image frequently contains broad
+bands around intensity boundaries.
+
+Ideally, an edge detector should identify a narrow
+curve near each boundary rather than a thick region.
+
+This motivates **non-maximum suppression**.
+
+For every candidate pixel:
+
+1. Estimate the gradient direction.
+2. Compare its magnitude with neighboring samples along
+   that direction.
+3. Retain the pixel only if it is a local maximum.
+
+The result is a thinner set of candidate edges.
+
+::: {.callout-warning}
+## Implementation detail
+
+A production implementation should consider interpolation
+along the gradient direction, handling of equal-valued
+neighboring pixels, and image boundaries.
+
+The full implementation will be developed in the
+companion notebook.
+:::
+
+# The Canny Edge Detection Algorithm
+
+Canny combines several operations into a complete
+edge-detection pipeline.
+
+The major stages are:
+
+1. Gaussian smoothing
+2. Gradient estimation
+3. Non-maximum suppression
+4. Double thresholding
+5. Edge tracking by hysteresis
+
+## Double thresholding
+
+A single threshold can produce either too many noisy
+detections or too few genuine boundaries.
+
+Instead, two thresholds are used:
+
+$$
+T_{\mathrm{low}}<T_{\mathrm{high}}.
+$$
+
+Pixels with gradient magnitude above the high threshold
+are classified as strong candidates.
+
+Pixels between the thresholds are weak candidates.
+
+Pixels below the low threshold are rejected.
+
+## Hysteresis
+
+Weak candidates are retained when connected to strong
+edges under the chosen neighborhood-connectivity rule.
+
+This helps preserve continuous boundaries while
+discarding isolated weak responses.
+
+::: {.callout-tip}
+## Interactive experiment planned
+
+An interactive Canny demonstration will expose:
+
+- Gaussian smoothing scale
+- Low threshold
+- High threshold
+- Intermediate gradient map
+- Non-maximum suppressed edges
+- Final hysteresis result
+
+Readers will be able to observe how each stage changes
+the result.
+:::
+
+# Comparing the Methods
+
+The operators discussed in this article have different
+strengths and limitations.
+
+| Method | Main idea | Important limitation |
+|---|---|---|
+| Simple differences | Estimate first derivatives | Sensitive to noise |
+| Prewitt | Estimate gradients with local averaging | Limited noise suppression |
+| Sobel | Weighted gradient estimation | Can produce broad responses |
+| Laplacian | Estimate second derivatives | Highly noise-sensitive |
+| Canny | Multi-stage boundary detection | Depends on smoothing and threshold choices |
+
+A useful experiment is to apply these methods to
+exactly the same input and compare the resulting maps.
+
+For a fair comparison, filter responses must be
+normalized consistently and any thresholding choices
+must be documented.
+
+# Connection to Convolutional Neural Networks
+
+Classical edge detectors use fixed kernels.
+
+Convolutional neural networks learn filter coefficients
+from data.
+
+For example, a learned convolutional filter may respond
+strongly to a particular orientation, colour transition
+or local texture.
+
+Early CNN filters sometimes resemble classical
+gradient detectors.
+
+However, CNNs are not restricted to manually designed
+edge filters.
+
+Deeper layers can combine local information into
+more complex representations.
+
+This provides a connection to a later article:
+
+**What Does a Convolutional Neural Network Actually Learn?**
+
+# What We Have Seen
+
+We started with a simple idea: image boundaries often
+correspond to changes in intensity.
+
+From this observation, we developed the following
+mathematical and computational ideas:
+
+- Derivatives measure local intensity change.
+- Finite differences approximate derivatives on digital
+  images.
+- Image gradients provide both magnitude and direction.
+- Correlation and convolution describe local filtering.
+- Sobel and Prewitt estimate image gradients.
+- Laplacian operators use second-order derivatives.
+- Gaussian smoothing reduces noise sensitivity.
+- Canny combines smoothing, gradients, suppression,
+  thresholding and hysteresis.
+
+The broader lesson is that a useful computer vision
+algorithm often emerges from combining several simple
+mathematical operations.
+
+# Exercises
+
+**Exercise 1.** Implement the Prewitt operator using
+the `correlate2d` function.
+
+**Exercise 2.** Construct synthetic horizontal,
+vertical and diagonal edges. Compare the directions
+returned by the Sobel gradient.
+
+**Exercise 3.** Add different amounts of Gaussian noise.
+Measure how the gradient response changes.
+
+**Exercise 4.** Implement Gaussian smoothing using
+separable one-dimensional kernels and compare the output
+with direct two-dimensional filtering.
+
+**Exercise 5.** Implement zero-crossing detection for
+the Laplacian response.
+
+**Exercise 6.** Implement non-maximum suppression and
+compare its output with the original gradient magnitude.
+
+**Exercise 7.** Complete the Canny algorithm using
+double thresholding and hysteresis.
+
+# 17. References and Further Reading
+
+1. Richard Szeliski, *Computer Vision: Algorithms and
+   Applications*, 2nd edition, Springer, 2022.
+
+2. John Canny, "A Computational Approach to Edge
+   Detection," IEEE Transactions on Pattern Analysis
+   and Machine Intelligence, 1986.
+
+3. Rafael C. Gonzalez and Richard E. Woods,
+   *Digital Image Processing*.
+
+4. David A. Forsyth and Jean Ponce,
+   *Computer Vision: A Modern Approach*.
+
+---
+
+*All numerical demonstrations in this article are
+intended to be reproducible. The companion notebook
+will include validation tests, additional experiments
+and a complete Canny implementation.*
+
