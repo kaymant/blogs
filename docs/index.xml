@@ -1433,78 +1433,2008 @@ Figure&nbsp;6: Effect of Gaussian smoothing before edge detection.
   <pubDate>Mon, 19 Oct 2026 18:30:00 GMT</pubDate>
 </item>
 <item>
-  <title>MCMC from Scratch: The Metropolis-Hastings Algorithm</title>
-  <link>https://anantkumar.online/posts/markov-chain/mcmc.html</link>
+  <title>MCMC from Scratch: The Metropolis–Hastings Algorithm</title>
+  <link>https://anantkumar.online/posts/markov-chain/</link>
   <description><![CDATA[ 
 
 
 
 
 
-<p>In our previous exploration of Importance Sampling, we saw how strategically altering our sampling distribution could massively reduce the variance of a Monte Carlo estimator. However, we also ran into a hard wall: Importance Sampling demands that we manually design a proposal distribution <img src="https://latex.codecogs.com/png.latex?q(x)"> that closely matches our target distribution <img src="https://latex.codecogs.com/png.latex?p(x)">. In high-dimensional spaces, or when dealing with complex, multimodal geometries, guessing the shape of <img src="https://latex.codecogs.com/png.latex?q(x)"> is functionally impossible.</p>
-<p>When we cannot wrap our target distribution in a static, analytical proposal, we must abandon independent, identically distributed (i.i.d.) sampling altogether. Instead, we let the algorithm find the important regions dynamically.</p>
-<p>This brings us to Markov Chain Monte Carlo (MCMC) and its foundational engine: the Metropolis-Hastings algorithm.</p>
-<section id="the-philosophy-of-the-random-walk" class="level3">
-<h3 class="anchored" data-anchor-id="the-philosophy-of-the-random-walk">The Philosophy of the Random Walk</h3>
-<p>Instead of trying to generate independent samples globally, MCMC builds a sequence of samples where each new sample depends <em>only</em> on the current one. This property is known as a <strong>Markov Chain</strong>.</p>
-<p>The goal of MCMC is to design a Markov Chain that wanders through the sample space in such a way that the amount of time it spends in a given region is exactly proportional to the target density <img src="https://latex.codecogs.com/png.latex?p(x)"> in that region. We want our chain to naturally drift toward areas of high probability and linger there, while occasionally exploring lower-probability valleys.</p>
-<p>To do this, we need a mechanism to propose a move, and a mathematical rule to decide whether to accept or reject that move.</p>
+<p>In our previous exploration of <strong>importance sampling</strong>, we saw how changing the sampling distribution can reduce the variance of a Monte Carlo estimator. But importance sampling works best when we can find a tractable proposal distribution that adequately covers the important regions of the target. In difficult, high-dimensional, or multimodal problems, constructing such a proposal can be challenging. Its weights may become extremely uneven, leaving very few effectively useful samples.</p>
+<p><strong>Markov chain Monte Carlo (MCMC)</strong> takes a different approach. Instead of drawing independent samples from a fixed global proposal and reweighting them, we construct a <em>dependent sequence</em> whose long-run distribution is the target. The best-known starting point is the <strong>Metropolis–Hastings (MH) algorithm</strong>.</p>
+<p>This article develops the underlying mathematics, implements MH without an MCMC library, explores a bimodal distribution, and explains why a histogram alone is insufficient evidence of convergence. We finish with a small Bayesian inference example.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>What we will learn
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Why sampling from an <strong>unnormalized</strong> density is possible.</li>
+<li>How the Metropolis–Hastings acceptance rule follows from <strong>detailed balance</strong>.</li>
+<li>How to implement acceptance decisions stably in the <strong>log domain</strong>.</li>
+<li>What tuning, burn-in, autocorrelation, effective sample size (ESS), and multi-chain comparisons tell us.</li>
+<li>Why multimodal targets can defeat an apparently reasonable sampler.</li>
+</ul>
+</div>
+</div>
+<section id="from-monte-carlo-integration-to-mcmc" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="from-monte-carlo-integration-to-mcmc"><span class="header-section-number">1</span> From Monte Carlo integration to MCMC</h2>
+<p>Suppose we want to compute an expectation under a probability density <img src="https://latex.codecogs.com/png.latex?p">:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbb%20E_p%5Bf(X)%5D%20=%20%5Cint%20f(x)p(x)%5C,dx.%0A"></p>
+<p>If we can generate independent observations <img src="https://latex.codecogs.com/png.latex?X_1,%5Cldots,X_N%5Csim%20p">, ordinary Monte Carlo uses</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cwidehat%7BI%7D_N%5E%7B%5Cmathrm%7Biid%7D%7D%20=%20%5Cfrac%7B1%7D%7BN%7D%5Csum_%7Bt=1%7D%5EN%20f(X_t).%0A"></p>
+<p>The problem is that evaluating a density and <strong>sampling from that density</strong> are different tasks. For example, a Bayesian posterior often has the form</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ap(%5Ctheta%5Cmid%20y)=%5Cfrac%7Bp(y%5Cmid%5Ctheta)p(%5Ctheta)%7D%7Bp(y)%7D,%0A%5Cqquad%20p(y)=%5Cint%20p(y%5Cmid%5Ctheta)p(%5Ctheta)%5C,d%5Ctheta.%0A"></p>
+<p>Computing the normalizing constant <img src="https://latex.codecogs.com/png.latex?p(y)"> can be difficult, even when the likelihood and prior are easy to evaluate. Let</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cwidetilde%20p(%5Ctheta)=p(y%5Cmid%5Ctheta)p(%5Ctheta),%0A%5Cqquad%20p(%5Ctheta%5Cmid%20y)%5Cpropto%5Cwidetilde%20p(%5Ctheta).%0A"></p>
+<p>Metropolis–Hastings only needs <strong>ratios of unnormalized densities</strong>: the unknown constant cancels.</p>
+<p>MCMC generates <img src="https://latex.codecogs.com/png.latex?X_0,X_1,%5Cldots"> from a Markov transition mechanism and approximates the expectation using</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cwidehat%7BI%7D_N%5E%7B%5Cmathrm%7BMCMC%7D%7D=%5Cfrac1N%5Csum_%7Bt=1%7D%5E%7BN%7Df(X_t).%0A"></p>
+<p>Unlike ordinary Monte Carlo, the observations are generally correlated. Under suitable ergodicity and integrability assumptions, the ergodic theorem nevertheless gives</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cwidehat%7BI%7D_N%5E%7B%5Cmathrm%7BMCMC%7D%7D%5Cxrightarrow%7B%5Cmathrm%7Ba.s.%7D%7D%5Cmathbb%20E_p%5Bf(X)%5D.%0A"></p>
+<p>The crucial phrase is <strong>under suitable assumptions</strong>. A valid stationary distribution does not guarantee that a particular short run has explored it well.</p>
 </section>
-<section id="the-metropolis-hastings-criteria" class="level3">
-<h3 class="anchored" data-anchor-id="the-metropolis-hastings-criteria">The Metropolis-Hastings Criteria</h3>
-<p>The Metropolis-Hastings algorithm requires two components: 1. An unnormalized target distribution <img src="https://latex.codecogs.com/png.latex?%5Ctilde%7Bp%7D(x)">. We don’t need the integration constant, which makes this perfect for Bayesian inference where the posterior is often unnormalized. 2. A proposal distribution <img src="https://latex.codecogs.com/png.latex?q(x'%7Cx)"> that dictates how we jump from our current state <img src="https://latex.codecogs.com/png.latex?x"> to a proposed new state <img src="https://latex.codecogs.com/png.latex?x'">. A common choice is a simple Gaussian random walk centered on the current state: <img src="https://latex.codecogs.com/png.latex?q(x'%7Cx)%20=%20%5Cmathcal%7BN%7D(x,%20%5Csigma%5E2)">.</p>
-<p>At each time step, we propose a jump from <img src="https://latex.codecogs.com/png.latex?x"> to <img src="https://latex.codecogs.com/png.latex?x'">. We then calculate the <strong>acceptance ratio</strong> <img src="https://latex.codecogs.com/png.latex?%5Calpha">:</p>
-<p><img src="https://latex.codecogs.com/png.latex?%5Calpha%20=%20%5Cmin%5Cleft(1,%20%5Cfrac%7B%5Ctilde%7Bp%7D(x')%20q(x%7Cx')%7D%7B%5Ctilde%7Bp%7D(x)%20q(x'%7Cx)%7D%5Cright)"></p>
-<p>If our proposal distribution is symmetric—meaning the probability of jumping from <img src="https://latex.codecogs.com/png.latex?x"> to <img src="https://latex.codecogs.com/png.latex?x'"> is the same as jumping from <img src="https://latex.codecogs.com/png.latex?x'"> to <img src="https://latex.codecogs.com/png.latex?x">, as is the case with a Gaussian—the <img src="https://latex.codecogs.com/png.latex?q"> terms cancel out entirely. The ratio simplifies to the Metropolis acceptance criteria:</p>
-<p><img src="https://latex.codecogs.com/png.latex?%5Calpha%20=%20%5Cmin%5Cleft(1,%20%5Cfrac%7B%5Ctilde%7Bp%7D(x')%7D%7B%5Ctilde%7Bp%7D(x)%7D%5Cright)"></p>
-<p>If the proposed state <img src="https://latex.codecogs.com/png.latex?x'"> has a higher density than the current state <img src="https://latex.codecogs.com/png.latex?x">, then <img src="https://latex.codecogs.com/png.latex?%5Cfrac%7B%5Ctilde%7Bp%7D(x')%7D%7B%5Ctilde%7Bp%7D(x)%7D%20%3E%201">, and <img src="https://latex.codecogs.com/png.latex?%5Calpha%20=%201">. We <strong>always</strong> accept moves that take us to higher probability regions.</p>
-<p>If the proposed state has a <em>lower</em> density, <img src="https://latex.codecogs.com/png.latex?%5Calpha"> will be a fraction between <img src="https://latex.codecogs.com/png.latex?0"> and <img src="https://latex.codecogs.com/png.latex?1">. We accept this downhill move probabilistically. This allowance for downhill movement is critical; it prevents the algorithm from getting permanently stuck in a local maximum, allowing it to explore the entire parameter space.</p>
+<section id="what-makes-a-markov-chain-useful-for-sampling" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="what-makes-a-markov-chain-useful-for-sampling"><span class="header-section-number">2</span> What makes a Markov chain useful for sampling?</h2>
+<p>A process <img src="https://latex.codecogs.com/png.latex?(X_t)_%7Bt%5Cge0%7D"> is a Markov chain when its next state depends on the past only through its current state:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5CPr(X_%7Bt+1%7D%5Cin%20A%5Cmid%20X_t,X_%7Bt-1%7D,%5Cldots)%0A=%5CPr(X_%7Bt+1%7D%5Cin%20A%5Cmid%20X_t).%0A"></p>
+<p>A transition kernel <img src="https://latex.codecogs.com/png.latex?K(x,A)"> gives the probability that the next state lies in a set <img src="https://latex.codecogs.com/png.latex?A">, conditional on <img src="https://latex.codecogs.com/png.latex?X_t=x">. A distribution <img src="https://latex.codecogs.com/png.latex?%5Cpi"> is <strong>stationary</strong> if</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cpi(A)=%5Cint%20K(x,A)%5C,%5Cpi(dx)%0A"></p>
+<p>for every measurable set <img src="https://latex.codecogs.com/png.latex?A">. Informally, if <img src="https://latex.codecogs.com/png.latex?X_t%5Csim%5Cpi">, then <img src="https://latex.codecogs.com/png.latex?X_%7Bt+1%7D%5Csim%5Cpi"> too.</p>
+<p>For MCMC we design <img src="https://latex.codecogs.com/png.latex?K"> to have our desired target <img src="https://latex.codecogs.com/png.latex?p"> as a stationary distribution. A particularly convenient sufficient condition is <strong>detailed balance</strong>:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cboxed%7B%5Cpi(dx)K(x,dx')=%5Cpi(dx')K(x',dx).%7D%0A"></p>
+<p>Detailed balance says the equilibrium probability flow from <img src="https://latex.codecogs.com/png.latex?x"> to <img src="https://latex.codecogs.com/png.latex?x'"> matches the flow back. Integrating over starting states shows that it implies stationarity. Detailed balance is <strong>sufficient, not necessary</strong>: some valid MCMC methods are nonreversible.</p>
+<p>Having the correct stationary distribution is only part of the story. To converge to a <em>unique</em> target from arbitrary starting points, a chain must also have appropriate accessibility and recurrence properties; in familiar discrete-state settings, irreducibility and aperiodicity are central. For the continuous-state examples below, a Gaussian random-walk proposal with an everywhere-positive target avoids many of these complications. Even then, convergence may be slow.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Modes are not destinations
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>An MCMC sampler should spend time in a region in proportion to its <strong>probability mass</strong>, not merely its peak height. High-density regions can have very little total mass when they are narrow. Consequently, “always climb toward higher density” would be the wrong algorithm.</p>
+</div>
+</div>
 </section>
-<section id="implementation-in-python" class="level3">
-<h3 class="anchored" data-anchor-id="implementation-in-python">Implementation in Python</h3>
-<p>Let’s write this from scratch. We will design a target distribution that is highly problematic for basic sampling: a bimodal distribution with two distinct peaks. We only know its unnormalized form.</p>
-<p>```python import numpy as np import matplotlib.pyplot as plt</p>
-<p>np.random.seed(42)</p>
+<section id="deriving-the-metropolishastings-rule" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="deriving-the-metropolishastings-rule"><span class="header-section-number">3</span> Deriving the Metropolis–Hastings rule</h2>
+<p>At state <img src="https://latex.codecogs.com/png.latex?x">, propose a candidate <img src="https://latex.codecogs.com/png.latex?x'"> from a <strong>proposal density</strong> <img src="https://latex.codecogs.com/png.latex?q(x'%5Cmid%20x)">. Accept the move with probability <img src="https://latex.codecogs.com/png.latex?%5Calpha(x,x')">, otherwise remain at <img src="https://latex.codecogs.com/png.latex?x">.</p>
+<p>The off-diagonal part of the resulting transition kernel is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AK(x,dx')=q(x'%5Cmid%20x)%5Calpha(x,x')%5C,dx',%5Cqquad%20x'%5Cne%20x.%0A"></p>
+<p>The probability of staying put contains the mass of <strong>rejected proposals</strong>. It is essential to record the repeated current state after a rejection: deleting repeats changes the distribution represented by the chain.</p>
+<p>To satisfy detailed balance between distinct states, we seek</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ap(x)q(x'%5Cmid%20x)%5Calpha(x,x')%0A=p(x')q(x%5Cmid%20x')%5Calpha(x',x).%0A"></p>
+<p>Define the ratio</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ar(x,x')=%5Cfrac%7B%5Cwidetilde%20p(x')q(x%5Cmid%20x')%7D%0A%7B%5Cwidetilde%20p(x)q(x'%5Cmid%20x)%7D.%0A"></p>
+<p>The Metropolis–Hastings choice is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cboxed%7B%5Calpha(x,x')=%5Cmin%5C%7B1,r(x,x')%5C%7D.%7D%0A"></p>
+<p>To verify it, write</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cbegin%7Baligned%7D%0Ap(x)q(x'%5Cmid%20x)%5Calpha(x,x')%0A&amp;=%5Cmin%5C%7Bp(x)q(x'%5Cmid%20x),%5C%20p(x')q(x%5Cmid%20x')%5C%7D%5C%5C%0A&amp;=p(x')q(x%5Cmid%20x')%5Calpha(x',x).%0A%5Cend%7Baligned%7D%0A"></p>
+<p>The equality works because the same normalizing constant multiplies <img src="https://latex.codecogs.com/png.latex?p(x)"> and <img src="https://latex.codecogs.com/png.latex?p(x')">. Hence the proposed rule satisfies detailed balance and therefore preserves the target distribution.</p>
+<p>This argument assumes the ratio is evaluated wherever proposals and target densities make it meaningful. A practical implementation must respect the target’s support and handle zero-density states carefully.</p>
+<section id="symmetric-proposals-the-metropolis-special-case" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="symmetric-proposals-the-metropolis-special-case"><span class="header-section-number">3.1</span> Symmetric proposals: the Metropolis special case</h3>
+<p>If <img src="https://latex.codecogs.com/png.latex?q(x'%5Cmid%20x)=q(x%5Cmid%20x')">, the proposal terms cancel:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cboxed%7B%5Calpha(x,x')=%5Cmin%5Cleft%5C%7B1,%5Cfrac%7B%5Cwidetilde%20p(x')%7D%7B%5Cwidetilde%20p(x)%7D%5Cright%5C%7D.%7D%0A"></p>
+<p>A Gaussian random walk is a standard example:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AX'=X_t+%5Cvarepsilon_t,%5Cqquad%0A%5Cvarepsilon_t%5Csim%5Cmathcal%20N(0,s%5E2).%0A"></p>
+<p>A move to a higher-density state is always accepted. A move to a lower-density state may also be accepted, which allows exploration beyond local maxima. <strong>That possibility does not guarantee timely transitions between widely separated modes.</strong></p>
 </section>
-<section id="our-unnormalized-target-distribution-a-bimodal-mixture" class="level1">
-<h1>Our unnormalized target distribution: A bimodal mixture</h1>
-<p>def target_pdf(x): return np.exp(-0.5 * (x - 2)<strong>2) + np.exp(-0.5 * (x + 2)</strong>2)</p>
-<p>def metropolis_hastings(iters, initial_x, step_size): samples = np.zeros(iters) current_x = initial_x accepted = 0</p>
-<pre><code>for i in range(iters):
-    # 1. Propose a new state from a symmetric Gaussian random walk
-    proposed_x = np.random.normal(loc=current_x, scale=step_size)
-    
-    # 2. Calculate the acceptance ratio (symmetric q cancels out)
-    ratio = target_pdf(proposed_x) / target_pdf(current_x)
-    alpha = min(1.0, ratio)
-    
-    # 3. Accept or reject probabilistically
-    if np.random.uniform(0, 1) &lt; alpha:
-        current_x = proposed_x
-        accepted += 1
-        
-    samples[i] = current_x
-    
-print(f"Acceptance Rate: {accepted / iters:.3f}")
-return samples</code></pre>
+<section id="asymmetric-proposals-need-the-hastings-correction" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="asymmetric-proposals-need-the-hastings-correction"><span class="header-section-number">3.2</span> Asymmetric proposals need the Hastings correction</h3>
+<p>For a general proposal, such as a drifted Gaussian <img src="https://latex.codecogs.com/png.latex?q(x'%5Cmid%20x)=%5Cmathcal%20N(x+%5Cdelta,s%5E2)">, one cannot cancel the <img src="https://latex.codecogs.com/png.latex?q"> factors. Omitting</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cfrac%7Bq(x%5Cmid%20x')%7D%7Bq(x'%5Cmid%20x)%7D%0A"></p>
+<p>would generally produce the wrong stationary distribution. Later we will implement the full formula for arbitrary log proposals.</p>
 </section>
-<section id="run-the-simulation" class="level1">
-<h1>Run the simulation</h1>
-<p>n_iterations = 10000 # A step size of 1.5 allows the chain to jump between the two peaks samples_py = metropolis_hastings(n_iterations, initial_x=0.0, step_size=1.5)</p>
+<section id="why-we-compute-in-the-log-domain" class="level3" data-number="3.3">
+<h3 data-number="3.3" class="anchored" data-anchor-id="why-we-compute-in-the-log-domain"><span class="header-section-number">3.3</span> Why we compute in the log domain</h3>
+<p>A direct computation of <img src="https://latex.codecogs.com/png.latex?%5Cwidetilde%20p(x')/%5Cwidetilde%20p(x)"> can overflow or underflow, particularly when densities are products of many small likelihood terms. Instead calculate</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Clog%20r%0A=%5Clog%5Cwidetilde%20p(x')-%5Clog%5Cwidetilde%20p(x)%0A+%5Clog%20q(x%5Cmid%20x')-%5Clog%20q(x'%5Cmid%20x).%0A"></p>
+<p>Draw <img src="https://latex.codecogs.com/png.latex?U%5Csim%5Cmathrm%7BUniform%7D(0,1)"> and accept precisely when</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cboxed%7B%5Clog%20U%3C%5Cmin%5C%7B0,%5Clog%20r%5C%7D.%7D%0A"></p>
+<p>No exponentiation of potentially extreme log densities is needed.</p>
 </section>
-<section id="visualization-trace-plot-and-histogram" class="level1">
-<h1>— Visualization: Trace Plot and Histogram —</h1>
-<p>fig, axes = plt.subplots(1, 2, figsize=(14, 5))</p>
 </section>
-<section id="trace-plot" class="level1">
-<h1>Trace Plot</h1>
-<p>axes[0].plot(samples_py, alpha=0.7, color=‘#2980b9’, linewidth=0.5) axes[0].set_title(“MCMC Trace Plot”, fontsize=14) axes[0].set_xlabel(“Iteration”) axes[0].set_ylabel(“State space (x)”)</p>
+<section id="implement-metropolishastings-from-scratch" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="implement-metropolishastings-from-scratch"><span class="header-section-number">4</span> Implement Metropolis–Hastings from scratch</h2>
+<p>We’ll use NumPy for randomness and Matplotlib for plots. The following implementation supports symmetric proposals by default, while allowing a log-proposal function for asymmetric cases. A single random-number generator is passed explicitly for reproducibility.</p>
+<div id="setup" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> numpy <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> np</span>
+<span id="cb1-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> matplotlib.pyplot <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> plt</span>
+<span id="cb1-3"></span>
+<span id="cb1-4">SEED <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">42</span></span>
+<span id="cb1-5">rng <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.random.default_rng(SEED)</span>
+<span id="cb1-6"></span>
+<span id="cb1-7"></span>
+<span id="cb1-8"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> metropolis_hastings(log_target, initial, n_steps, proposal_scale,</span>
+<span id="cb1-9">                        rng, log_proposal<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>):</span>
+<span id="cb1-10">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">"""One-dimensional random-walk MH with optional proposal correction.</span></span>
+<span id="cb1-11"></span>
+<span id="cb1-12"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">    log_target(x): unnormalized log density at scalar x</span></span>
+<span id="cb1-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">    log_proposal(to_x, from_x): log q(to_x | from_x)</span></span>
+<span id="cb1-14"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">    The default is a symmetric N(current, proposal_scale**2) proposal.</span></span>
+<span id="cb1-15"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">    """</span></span>
+<span id="cb1-16">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> n_steps <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">or</span> proposal_scale <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>:</span>
+<span id="cb1-17">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"n_steps must be positive and proposal_scale &gt; 0"</span>)</span>
+<span id="cb1-18">    current <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(initial)</span>
+<span id="cb1-19">    current_logp <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(log_target(current))</span>
+<span id="cb1-20">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">not</span> np.isfinite(current_logp):</span>
+<span id="cb1-21">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Initial state must have finite log target density"</span>)</span>
+<span id="cb1-22"></span>
+<span id="cb1-23">    draws <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.empty(n_steps, dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb1-24">    accepted <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.zeros(n_steps, dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">bool</span>)</span>
+<span id="cb1-25"></span>
+<span id="cb1-26">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> t <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(n_steps):</span>
+<span id="cb1-27">        proposed <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> current <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> rng.normal(<span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.0</span>, proposal_scale)</span>
+<span id="cb1-28">        proposed_logp <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(log_target(proposed))</span>
+<span id="cb1-29">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> np.isnan(proposed_logp):</span>
+<span id="cb1-30">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Target returned NaN"</span>)</span>
+<span id="cb1-31"></span>
+<span id="cb1-32">        log_ratio <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> proposed_logp <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> current_logp</span>
+<span id="cb1-33">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> log_proposal <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">is</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">not</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>:</span>
+<span id="cb1-34">            log_ratio <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+=</span> (log_proposal(current, proposed)</span>
+<span id="cb1-35">                          <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> log_proposal(proposed, current))</span>
+<span id="cb1-36"></span>
+<span id="cb1-37">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> np.log(rng.uniform()) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">min</span>(<span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.0</span>, log_ratio):</span>
+<span id="cb1-38">            current, current_logp <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> proposed, proposed_logp</span>
+<span id="cb1-39">            accepted[t] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span></span>
+<span id="cb1-40"></span>
+<span id="cb1-41">        draws[t] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> current  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># KEEP repeated states on rejection</span></span>
+<span id="cb1-42"></span>
+<span id="cb1-43">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> draws, accepted</span></code></pre></div></div>
+</div>
+<p>The <img src="https://latex.codecogs.com/png.latex?t">-th stored value is the chain’s state <strong>after</strong> proposal <img src="https://latex.codecogs.com/png.latex?t">. The initial state is not included in the returned array. Here <code>proposal_scale</code> is the <strong>standard deviation</strong>, not the variance, of the normal increment.</p>
 </section>
-<section id="histogram-vs-target-density" class="level1">
-<h1>Histogram vs Target Density</h1>
-<p>x_plot = np.linspace(-6, 6, 500) # Normalize the true target mathematically for plotting comparison y_true = target_pdf(x_plot) / (2 * np.sqrt(2 * np.pi))</p>
-<p>axes[1].hist(samples_py, bins=60, density=True, color=‘#bdc3c7’, edgecolor=‘black’, alpha=0.6, label=“MCMC Samples”) axes[1].plot(x_plot, y_true, color=‘#c0392b’, linewidth=2.5, label=“True Normalized Target”) axes[1].set_title(“Sample Distribution vs Target”, fontsize=14) axes[1].set_xlabel(“x”) axes[1].legend()</p>
-<p>plt.tight_layout() plt.show()</p>
+<section id="first-experiment-a-bimodal-target" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="first-experiment-a-bimodal-target"><span class="header-section-number">5</span> First experiment: a bimodal target</h2>
+<p>Consider the unnormalized target from our original example:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cwidetilde%20p(x)=e%5E%7B-(x-2)%5E2/2%7D+e%5E%7B-(x+2)%5E2/2%7D.%0A"></p>
+<p>This is proportional to an equal mixture of <img src="https://latex.codecogs.com/png.latex?%5Cmathcal%20N(-2,1)"> and <img src="https://latex.codecogs.com/png.latex?%5Cmathcal%20N(2,1)">. In this particular teaching example, the normalizing constant <em>is</em> analytically available:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ap(x)=%5Cfrac%7Be%5E%7B-(x-2)%5E2/2%7D+e%5E%7B-(x+2)%5E2/2%7D%7D%0A%7B2%5Csqrt%7B2%5Cpi%7D%7D%0A=%5Ctfrac12%5Cvarphi(x;-2,1)+%5Ctfrac12%5Cvarphi(x;2,1).%0A"></p>
+<p>Knowing the normalizer lets us <strong>validate</strong> the sampler; MH itself does not use it. The true distribution is symmetric, with mean <img src="https://latex.codecogs.com/png.latex?0"> and variance <img src="https://latex.codecogs.com/png.latex?1+2%5E2=5">.</p>
+<div id="cell-fig-bimodal" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> log_bimodal(x):</span>
+<span id="cb2-2">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># log(exp(a) + exp(b)) without underflow</span></span>
+<span id="cb2-3">    a <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span></span>
+<span id="cb2-4">    b <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span></span>
+<span id="cb2-5">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(np.logaddexp(a, b))</span>
+<span id="cb2-6"></span>
+<span id="cb2-7"></span>
+<span id="cb2-8"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> bimodal_pdf(x):</span>
+<span id="cb2-9">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> (np.exp(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb2-10">            <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> np.exp(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> (<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> np.sqrt(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> np.pi))</span>
+<span id="cb2-11"></span>
+<span id="cb2-12">x_grid <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">700</span>)</span>
+<span id="cb2-13">fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3.5</span>))</span>
+<span id="cb2-14">ax.plot(x_grid, bimodal_pdf(x_grid), linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb2-15">ax.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(xlabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"x"</span>, ylabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"p(x)"</span>, title<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Exact normalized target (for validation only)"</span>)</span>
+<span id="cb2-16">plt.show()</span></code></pre></div></div>
+<div class="cell-output cell-output-display">
+<div id="fig-bimodal" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-bimodal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/markov-chain/index_files/figure-html/fig-bimodal-output-1.png" width="680" height="339" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bimodal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: A bimodal target with modes near -2 and +2; the sampler only uses its unnormalized log density.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Run a random-walk sampler, with <img src="https://latex.codecogs.com/png.latex?s=1.5">, for 30,000 updates. This proposal makes relatively local moves. Whether it crosses between the modes often enough must be checked, not assumed.</p>
+<div id="cell-fig-mcmc-trace" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1">n_steps <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">30_000</span></span>
+<span id="cb3-2">samples, accepted <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> metropolis_hastings(</span>
+<span id="cb3-3">    log_target<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>log_bimodal,</span>
+<span id="cb3-4">    initial<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.0</span>,</span>
+<span id="cb3-5">    n_steps<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>n_steps,</span>
+<span id="cb3-6">    proposal_scale<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.5</span>,</span>
+<span id="cb3-7">    rng<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>rng,</span>
+<span id="cb3-8">)</span>
+<span id="cb3-9"></span>
+<span id="cb3-10">burn <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5_000</span></span>
+<span id="cb3-11">post <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> samples[burn:]</span>
+<span id="cb3-12"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Acceptance proportion: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>accepted<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean()<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb3-13"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Post-warm-up sample mean: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>post<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean()<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> (target 0)"</span>)</span>
+<span id="cb3-14"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Post-warm-up sample variance: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>post<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>var(ddof<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> (target 5)"</span>)</span>
+<span id="cb3-15"></span>
+<span id="cb3-16">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>))</span>
+<span id="cb3-17">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].plot(samples, linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span>)</span>
+<span id="cb3-18">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].axvline(burn, linestyle<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"--"</span>, color<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"black"</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"illustrative warm-up"</span>)</span>
+<span id="cb3-19">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(xlabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Iteration"</span>, ylabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Current state"</span>, title<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Trace"</span>)</span>
+<span id="cb3-20">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>].legend()</span>
+<span id="cb3-21">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].hist(post, bins<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">65</span>, density<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>, alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.55</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Retained states"</span>)</span>
+<span id="cb3-22">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].plot(x_grid, bimodal_pdf(x_grid), linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Exact target"</span>)</span>
+<span id="cb3-23">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(xlabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"x"</span>, ylabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Density"</span>, title<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Histogram vs target"</span>)</span>
+<span id="cb3-24">axes[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].legend()</span>
+<span id="cb3-25">plt.tight_layout()</span>
+<span id="cb3-26">plt.show()</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Acceptance proportion: 0.682
+Post-warm-up sample mean: -0.076 (target 0)
+Post-warm-up sample variance: 5.128 (target 5)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-mcmc-trace" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-mcmc-trace-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/markov-chain/index_files/figure-html/fig-mcmc-trace-output-2.png" width="1142" height="374" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-mcmc-trace-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: A trace plot and histogram of a bimodal-target MH run. Neither plot alone establishes convergence.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The <code>burn = 5000</code> choice is <strong>illustrative</strong>, not a mathematically justified universal burn-in rule. We retain the same value for later comparisons. Samples after warm-up remain dependent, and discarding early states does not automatically cure poor mixing.</p>
+</section>
+<section id="proposal-scale-a-trade-off-between-movement-and-acceptance" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="proposal-scale-a-trade-off-between-movement-and-acceptance"><span class="header-section-number">6</span> Proposal scale: a trade-off between movement and acceptance</h2>
+<p>A small Gaussian proposal yields many accepted moves but may explore slowly. An excessively large proposal may suggest mostly implausible states, causing frequent rejections. The goal is <strong>efficient exploration</strong>, not maximum acceptance.</p>
+<div id="cell-fig-proposal-comparison" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1">scales <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [<span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.15</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.5</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8.0</span>]</span>
+<span id="cb5-2">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">6</span>), sharex<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span>
+<span id="cb5-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> ax, scale <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">zip</span>(axes, scales):</span>
+<span id="cb5-4">    chain, moves <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> metropolis_hastings(</span>
+<span id="cb5-5">        log_bimodal, initial<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span>, n_steps<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4000</span>,</span>
+<span id="cb5-6">        proposal_scale<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>scale, rng<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>np.random.default_rng(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">int</span>(scale <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)))</span>
+<span id="cb5-7">    ax.plot(chain, linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.6</span>)</span>
+<span id="cb5-8">    ax.set_ylabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"x"</span>)</span>
+<span id="cb5-9">    ax.set_title(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Scale </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>scale<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:g}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> | acceptance </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>moves<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean()<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.2f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>, fontsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)</span>
+<span id="cb5-10">axes[<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Iteration"</span>)</span>
+<span id="cb5-11">plt.tight_layout()</span>
+<span id="cb5-12">plt.show()</span></code></pre></div></div>
+<div class="cell-output cell-output-display">
+<div id="fig-proposal-comparison" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-proposal-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/markov-chain/index_files/figure-html/fig-proposal-comparison-output-1.png" width="950" height="566" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-proposal-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: How the random-walk scale affects acceptance and trajectories on the same target.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>For smooth, approximately Gaussian targets in high dimensions, an acceptance proportion around <img src="https://latex.codecogs.com/png.latex?0.234"> appears in a well-known <strong>asymptotic optimal-scaling result</strong> for certain random-walk Metropolis algorithms. It is <strong>not</strong> a universal acceptance target, especially not for this one-dimensional bimodal example. In practice, compare estimates and autocorrelation or effective sample size across sensible proposal scales.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Should we adapt the proposal scale during the run?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Tuning a proposal during an initial <em>warm-up</em> stage, freezing the tuned value, and then collecting inference draws is a straightforward strategy. Adapting indefinitely requires additional mathematical conditions; naively changing the proposal at every step can invalidate standard stationary-chain reasoning.</p>
+</div>
+</div>
+</section>
+<section id="why-sample-count-is-not-effective-sample-size" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="why-sample-count-is-not-effective-sample-size"><span class="header-section-number">7</span> Why sample count is not effective sample size</h2>
+<p>If sequential draws were independent, <img src="https://latex.codecogs.com/png.latex?N"> samples would provide the usual Monte Carlo variance reduction. MCMC samples are correlated. For a scalar quantity <img src="https://latex.codecogs.com/png.latex?f(X_t)">, let <img src="https://latex.codecogs.com/png.latex?%5Crho_f(k)"> be its lag-<img src="https://latex.codecogs.com/png.latex?k"> autocorrelation. When the sum converges appropriately, define the <strong>integrated autocorrelation time</strong></p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Ctau_%7B%5Cmathrm%7Bint%7D,f%7D=1+2%5Csum_%7Bk=1%7D%5E%7B%5Cinfty%7D%5Crho_f(k),%0A"></p>
+<p>and its associated asymptotic effective sample size</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cboxed%7BN_%7B%5Cmathrm%7Beff%7D,f%7D%5Capprox%5Cfrac%7BN%7D%7B%5Ctau_%7B%5Cmathrm%7Bint%7D,f%7D%7D.%7D%0A"></p>
+<p>Under a suitable Markov-chain central limit theorem,</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Coperatorname%7BVar%7D(%5Cwidehat%20I_N)%5Capprox%0A%5Cfrac%7B%5Coperatorname%7BVar%7D_p(f(X))%5Ctau_%7B%5Cmathrm%7Bint%7D,f%7D%7D%7BN%7D.%0A"></p>
+<p>ESS depends on the statistic <img src="https://latex.codecogs.com/png.latex?f">: a chain might estimate the mean well but estimate a rare-tail probability poorly. A very negative autocorrelation can even yield ESS greater than the nominal sample count under some conventions. The simple implementation below estimates autocorrelation directly for a <strong>demonstration</strong>; robust production ESS estimators require more care.</p>
+<div id="cell-fig-autocorrelation" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> autocorrelation(x, max_lag<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>):</span>
+<span id="cb6-2">    x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.asarray(x, dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb6-3">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(x) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;=</span> max_lag:</span>
+<span id="cb6-4">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Need more observations than max_lag"</span>)</span>
+<span id="cb6-5">    centered <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> x.mean()</span>
+<span id="cb6-6">    var0 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.dot(centered, centered)</span>
+<span id="cb6-7">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> var0 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>:</span>
+<span id="cb6-8">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> np.full(max_lag <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, np.nan)</span>
+<span id="cb6-9">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> np.array([np.dot(centered[:<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(x)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>k], centered[k:]) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> var0</span>
+<span id="cb6-10">                     <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> k <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(max_lag <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)])</span>
+<span id="cb6-11"></span>
+<span id="cb6-12">acf <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> autocorrelation(post, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb6-13">fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">9</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3.5</span>))</span>
+<span id="cb6-14">ax.plot(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(acf)), acf, marker<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"."</span>, markersize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>)</span>
+<span id="cb6-15">ax.axhline(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, color<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"black"</span>, linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.8</span>)</span>
+<span id="cb6-16">ax.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(xlabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Lag"</span>, ylabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Autocorrelation"</span>, title<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Autocorrelation of x"</span>)</span>
+<span id="cb6-17">plt.show()</span></code></pre></div></div>
+<div class="cell-output cell-output-display">
+<div id="fig-autocorrelation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-autocorrelation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/markov-chain/index_files/figure-html/fig-autocorrelation-output-1.png" width="738" height="339" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-autocorrelation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Estimated autocorrelation of the retained bimodal-chain states.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>A crude finite-lag estimate is sometimes informative but can be unstable or misleading, especially when mode switching is rare. Here we use a common <strong>initial-positive-pairs</strong> heuristic for a quick ESS indication, not as a substitute for well-tested diagnostic software.</p>
+<div id="ess-calculation" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> illustrative_ess(x, max_lag<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>):</span>
+<span id="cb7-2">    max_lag <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">min</span>(max_lag, <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(x) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb7-3">    rho <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> autocorrelation(x, max_lag)</span>
+<span id="cb7-4">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">not</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">all</span>(np.isfinite(rho)):</span>
+<span id="cb7-5">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"nan"</span>)</span>
+<span id="cb7-6">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Sum adjacent positive autocorrelation pairs; truncate at the first</span></span>
+<span id="cb7-7">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># nonpositive pair to avoid unstable long-lag noise.</span></span>
+<span id="cb7-8">    pair_sums <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb7-9">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> k <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">range</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, max_lag, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>):</span>
+<span id="cb7-10">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> k <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> max_lag:</span>
+<span id="cb7-11">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">break</span></span>
+<span id="cb7-12">        pair <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> rho[k] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> rho[k <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>]</span>
+<span id="cb7-13">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> pair <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>:</span>
+<span id="cb7-14">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">break</span></span>
+<span id="cb7-15">        pair_sums.append(pair)</span>
+<span id="cb7-16">    tau <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">max</span>(<span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.0</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.0</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(pair_sums))</span>
+<span id="cb7-17">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(x) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> tau</span>
+<span id="cb7-18"></span>
+<span id="cb7-19"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Crude ESS for x: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>illustrative_ess(post)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.0f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> of </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(post)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> retained states"</span>)</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Crude ESS for x: 1415 of 25000 retained states</code></pre>
+</div>
+</div>
+<p><strong>Thinning</strong> (retaining only every <img src="https://latex.codecogs.com/png.latex?k">-th draw) typically throws away information and is not a general solution to autocorrelation. It can be useful to control storage or downstream computation, but improving the transition mechanism is usually preferable when possible.</p>
+</section>
+<section id="multiple-chains-can-reveal-hidden-problems" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="multiple-chains-can-reveal-hidden-problems"><span class="header-section-number">8</span> Multiple chains can reveal hidden problems</h2>
+<p>One trajectory may look stationary while remaining confined to one mode. A simple diagnostic is to run several independent chains from <strong>dispersed initial values</strong> and compare their behavior. For this symmetric mixture, each mode should ultimately receive about half the probability mass.</p>
+<div id="cell-fig-multiple-chains" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1">starts <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5.0</span>, <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2.0</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5.0</span>]</span>
+<span id="cb9-2">chains <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb9-3">fig, axes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span>), sharex<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span>
+<span id="cb9-4"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> i, (start, ax) <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">enumerate</span>(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">zip</span>(starts, axes)):</span>
+<span id="cb9-5">    chain, _ <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> metropolis_hastings(</span>
+<span id="cb9-6">        log_bimodal, initial<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>start, n_steps<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8000</span>,</span>
+<span id="cb9-7">        proposal_scale<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.5</span>, rng<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>np.random.default_rng(SEED <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> i))</span>
+<span id="cb9-8">    chains.append(chain[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>:])</span>
+<span id="cb9-9">    ax.plot(chain, linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.6</span>)</span>
+<span id="cb9-10">    ax.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(ylabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"x"</span>, title<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Start at x = </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>start<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:g}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb9-11">axes[<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>].set_xlabel(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Iteration"</span>)</span>
+<span id="cb9-12">plt.tight_layout()</span>
+<span id="cb9-13">plt.show()</span>
+<span id="cb9-14"></span>
+<span id="cb9-15"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">for</span> i, chain <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">enumerate</span>(chains, start<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>):</span>
+<span id="cb9-16">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Chain </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>i<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">: mean=</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>chain<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean()<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:+.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">, P(x&gt;0)=</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>np<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean(chain<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div></div>
+<div class="cell-output cell-output-display">
+<div id="fig-multiple-chains" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-multiple-chains-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/markov-chain/index_files/figure-html/fig-multiple-chains-output-1.png" width="950" height="662" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-multiple-chains-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Four chains starting from different locations; agreement improves confidence but cannot prove convergence.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Chain 1: mean=+0.070, P(x&gt;0)=0.509
+Chain 2: mean=+0.018, P(x&gt;0)=0.502
+Chain 3: mean=+0.021, P(x&gt;0)=0.503
+Chain 4: mean=+0.050, P(x&gt;0)=0.507</code></pre>
+</div>
+</div>
+<p>A common formal comparison is the <strong>potential scale reduction statistic</strong>, <img src="https://latex.codecogs.com/png.latex?%5Cwidehat%20R">. The classical version compares between-chain and within-chain variation. With <img src="https://latex.codecogs.com/png.latex?m"> equal-length chains of length <img src="https://latex.codecogs.com/png.latex?n">, let <img src="https://latex.codecogs.com/png.latex?W"> be the mean within-chain variance, <img src="https://latex.codecogs.com/png.latex?B=n%5Coperatorname%7BVar%7D(%5Coverline%20X_1,%5Cldots,%5Coverline%20X_m)">, and</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cwidehat%20V=%5Cfrac%7Bn-1%7D%7Bn%7DW+%5Cfrac%7BB%7D%7Bn%7D,%0A%5Cqquad%0A%5Cwidehat%20R_%7B%5Cmathrm%7Bclassical%7D%7D=%5Csqrt%7B%5Cfrac%7B%5Cwidehat%20V%7D%7BW%7D%7D.%0A"></p>
+<div id="rhat-classical" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> classical_rhat(chains):</span>
+<span id="cb11-2">    arr <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.asarray(chains, dtype<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>)</span>
+<span id="cb11-3">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> arr.ndim <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">or</span> arr.shape[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">or</span> arr.shape[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&lt;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>:</span>
+<span id="cb11-4">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">ValueError</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Expected at least two chains of equal length"</span>)</span>
+<span id="cb11-5">    m, n <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> arr.shape</span>
+<span id="cb11-6">    chain_means <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> arr.mean(axis<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb11-7">    W <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> arr.var(axis<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, ddof<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>).mean()</span>
+<span id="cb11-8">    B <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> n <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> chain_means.var(ddof<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb11-9">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(np.sqrt((((n <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> n) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> W <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> B <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> n) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> W))</span>
+<span id="cb11-10"></span>
+<span id="cb11-11"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Classical R-hat (demonstration): </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>classical_rhat(chains)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Classical R-hat (demonstration): 1.000</code></pre>
+</div>
+</div>
+<p>This code deliberately computes the <strong>classical</strong> statistic for transparency. For serious Bayesian analysis, prefer <strong>rank-normalized, split, folded <img src="https://latex.codecogs.com/png.latex?%5Cwidehat%20R"></strong>, alongside bulk and tail ESS; the modern diagnostic detects problems that the classical version can miss. Values close to <img src="https://latex.codecogs.com/png.latex?1"> are desirable, but a small value is <strong>not proof of convergence</strong>. As a common practice, values above approximately <img src="https://latex.codecogs.com/png.latex?1.01"> warrant investigation with modern rank-based <img src="https://latex.codecogs.com/png.latex?%5Cwidehat%20R">.</p>
+</section>
+<section id="a-failure-case-separated-modes" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="a-failure-case-separated-modes"><span class="header-section-number">9</span> A failure case: separated modes</h2>
+<p>Even a mathematically valid MH chain may cross a low-density valley only extremely rarely. Consider</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ap_%7B%5Cmathrm%7Bfar%7D%7D(x)=%5Ctfrac12%5Cvarphi(x;-8,1)+%5Ctfrac12%5Cvarphi(x;8,1).%0A"></p>
+<p>A local random-walk proposal can spend the entire experiment in one mode. This is a <strong>mixing failure</strong>, even if acceptance is high and the trace looks stable.</p>
+<div id="cell-fig-failed-mixing" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> log_far_modes(x):</span>
+<span id="cb13-2">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(np.logaddexp(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8.0</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>,</span>
+<span id="cb13-3">                              <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (x <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8.0</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>))</span>
+<span id="cb13-4"></span>
+<span id="cb13-5">far_chain, far_accept <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> metropolis_hastings(</span>
+<span id="cb13-6">    log_far_modes, initial<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8.0</span>, n_steps<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12000</span>,</span>
+<span id="cb13-7">    proposal_scale<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.0</span>, rng<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>np.random.default_rng(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">122</span>))</span>
+<span id="cb13-8">fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">9</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3.5</span>))</span>
+<span id="cb13-9">ax.plot(far_chain, linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.7</span>)</span>
+<span id="cb13-10">ax.axhline(<span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8.0</span>, linestyle<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"--"</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"other mode (+8)"</span>)</span>
+<span id="cb13-11">ax.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(xlabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Iteration"</span>, ylabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"x"</span>, title<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"A potentially misleading trace"</span>)</span>
+<span id="cb13-12">ax.legend()</span>
+<span id="cb13-13">plt.show()</span>
+<span id="cb13-14"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Acceptance: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>far_accept<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean()<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">; fraction x &gt; 0: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>np<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean(far_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div></div>
+<div class="cell-output cell-output-display">
+<div id="fig-failed-mixing" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-failed-mixing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/markov-chain/index_files/figure-html/fig-failed-mixing-output-1.png" width="757" height="339" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-failed-mixing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Separated modes: a local random walk can remain trapped near its initial mode for a long run.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Acceptance: 0.704; fraction x &gt; 0: 0.000</code></pre>
+</div>
+</div>
+<p>When different chains are stuck in different modes, their means and occupancy probabilities disagree. Potential remedies include better-scaled or nonlocal proposals, parallel tempering, specialized multimodal methods, or reparameterization. Simply increasing the number of steps is not always computationally feasible.</p>
+</section>
+<section id="a-bayesian-example-inferring-an-unknown-mean" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="a-bayesian-example-inferring-an-unknown-mean"><span class="header-section-number">10</span> A Bayesian example: inferring an unknown mean</h2>
+<p>Suppose we observe <img src="https://latex.codecogs.com/png.latex?y_1,%5Cldots,y_n%5Cmid%5Cmu%5Cstackrel%7B%5Cmathrm%7Biid%7D%7D%5Csim%5Cmathcal%20N(%5Cmu,%5Csigma%5E2)"> with known <img src="https://latex.codecogs.com/png.latex?%5Csigma">, and place a prior <img src="https://latex.codecogs.com/png.latex?%5Cmu%5Csim%5Cmathcal%20N(%5Cmu_0,%5Ctau_0%5E2)">. Up to an additive constant, the log posterior is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Clog%5Cwidetilde%20p(%5Cmu%5Cmid%20y)%0A=-%5Cfrac1%7B2%5Csigma%5E2%7D%5Csum_%7Bi=1%7D%5En(y_i-%5Cmu)%5E2%0A%20%20-%5Cfrac%7B(%5Cmu-%5Cmu_0)%5E2%7D%7B2%5Ctau_0%5E2%7D.%0A"></p>
+<p>For this conjugate example, the posterior is known analytically:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Ctau_n%5E2=%5Cleft(%5Cfrac1%7B%5Ctau_0%5E2%7D+%5Cfrac%20n%7B%5Csigma%5E2%7D%5Cright)%5E%7B-1%7D,%0A%5Cqquad%0A%5Cmu_n=%5Ctau_n%5E2%5Cleft(%5Cfrac%7B%5Cmu_0%7D%7B%5Ctau_0%5E2%7D%0A+%5Cfrac%7B%5Csum_i%20y_i%7D%7B%5Csigma%5E2%7D%5Cright),%0A"></p>
+<p>so <img src="https://latex.codecogs.com/png.latex?%5Cmu%5Cmid%20y%5Csim%5Cmathcal%20N(%5Cmu_n,%5Ctau_n%5E2)">. This makes an excellent correctness check for the MCMC code.</p>
+<div id="cell-fig-bayesian-posterior" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1">data_rng <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.random.default_rng(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2026</span>)</span>
+<span id="cb15-2">y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data_rng.normal(loc<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.8</span>, scale<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.2</span>, size<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">25</span>)</span>
+<span id="cb15-3">sigma, mu0, tau0 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.2</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.0</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3.0</span></span>
+<span id="cb15-4"></span>
+<span id="cb15-5"></span>
+<span id="cb15-6"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> log_posterior_mu(mu):</span>
+<span id="cb15-7">    log_likelihood <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> np.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>(((y <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> mu) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> sigma)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb15-8">    log_prior <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> ((mu <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> mu0) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> tau0)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span></span>
+<span id="cb15-9">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">float</span>(log_likelihood <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> log_prior)</span>
+<span id="cb15-10"></span>
+<span id="cb15-11">posterior_var <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> (<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> tau0<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(y) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> sigma<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb15-12">posterior_mean <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> posterior_var <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> (mu0 <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> tau0<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> y.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">sum</span>() <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> sigma<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb15-13">posterior_sd <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.sqrt(posterior_var)</span>
+<span id="cb15-14"></span>
+<span id="cb15-15">posterior_chain, posterior_accept <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> metropolis_hastings(</span>
+<span id="cb15-16">    log_posterior_mu, initial<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5.0</span>, n_steps<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">15000</span>,</span>
+<span id="cb15-17">    proposal_scale<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span>, rng<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>np.random.default_rng(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">456</span>))</span>
+<span id="cb15-18">posterior_draws <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> posterior_chain[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2000</span>:]</span>
+<span id="cb15-19"></span>
+<span id="cb15-20">mu_grid <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.linspace(posterior_mean <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> posterior_sd,</span>
+<span id="cb15-21">                      posterior_mean <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> posterior_sd, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">400</span>)</span>
+<span id="cb15-22">exact_pdf <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> np.exp(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> ((mu_grid <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> posterior_mean) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/</span> posterior_sd)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb15-23">exact_pdf <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/=</span> posterior_sd <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> np.sqrt(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> np.pi)</span>
+<span id="cb15-24"></span>
+<span id="cb15-25">fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>))</span>
+<span id="cb15-26">ax.hist(posterior_draws, bins<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">55</span>, density<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>, alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.55</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"MH"</span>)</span>
+<span id="cb15-27">ax.plot(mu_grid, exact_pdf, linewidth<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Exact posterior"</span>)</span>
+<span id="cb15-28">ax.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(xlabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Unknown mean μ"</span>, ylabel<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Posterior density"</span>, title<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Bayesian normal-mean posterior"</span>)</span>
+<span id="cb15-29">ax.legend()</span>
+<span id="cb15-30">plt.show()</span>
+<span id="cb15-31"></span>
+<span id="cb15-32"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Exact posterior mean: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>posterior_mean<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.4f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb15-33"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"MCMC estimated mean: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>posterior_draws<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean()<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.4f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb15-34"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Exact posterior SD:   </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>posterior_sd<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.4f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb15-35"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"MCMC estimated SD:   </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>posterior_draws<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>std(ddof<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.4f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb15-36"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Acceptance fraction: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>posterior_accept<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>mean()<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:.3f}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div></div>
+<div class="cell-output cell-output-display">
+<div id="fig-bayesian-posterior" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-bayesian-posterior-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="https://anantkumar.online/posts/markov-chain/index_files/figure-html/fig-bayesian-posterior-output-1.png" width="681" height="376" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bayesian-posterior-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Metropolis–Hastings posterior draws compared with the exact normal posterior.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Exact posterior mean: 1.7172
+MCMC estimated mean: 1.7214
+Exact posterior SD:   0.2392
+MCMC estimated SD:   0.2420
+Acceptance fraction: 0.483</code></pre>
+</div>
+</div>
+<p>Our example is intentionally simple enough to admit an exact posterior. In more complicated Bayesian models, normalizing constants and posterior moments may be unknown, so multiple-chain diagnostics, sensitivity checks, and prior predictive or posterior predictive reasoning become especially important.</p>
+</section>
+<section id="common-mistakes-and-their-consequences" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="common-mistakes-and-their-consequences"><span class="header-section-number">11</span> Common mistakes and their consequences</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Mistake</th>
+<th>Why it matters</th>
+<th>Better approach</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Discarding rejected states</td>
+<td>Overweights accepted locations; no longer represents the MH chain</td>
+<td>Store the current state at <strong>every</strong> iteration</td>
+</tr>
+<tr class="even">
+<td>Using a density ratio directly</td>
+<td>Underflow/overflow for extreme log likelihoods</td>
+<td>Compare <strong>log</strong> acceptance ratios</td>
+</tr>
+<tr class="odd">
+<td>Cancelling an asymmetric proposal</td>
+<td>Violates the intended detailed-balance construction</td>
+<td>Include both forward and reverse proposal densities</td>
+</tr>
+<tr class="even">
+<td>Choosing scale from acceptance alone</td>
+<td>High acceptance can accompany tiny exploration steps</td>
+<td>Inspect mixing, autocorrelation, ESS, and estimates</td>
+</tr>
+<tr class="odd">
+<td>Treating burn-in as a cure-all</td>
+<td>Stationary-looking segments can be trapped in one mode</td>
+<td>Run dispersed chains and investigate transitions</td>
+</tr>
+<tr class="even">
+<td>Treating all draws as independent</td>
+<td>Understates uncertainty</td>
+<td>Use MCSE/ESS appropriate to the estimand</td>
+</tr>
+<tr class="odd">
+<td>Assuming a good histogram proves convergence</td>
+<td>A histogram can hide time ordering and rare transitions</td>
+<td>Inspect traces and cross-chain agreement</td>
+</tr>
+</tbody>
+</table>
+<p>A subtle point: samples from a stationary MH chain are <strong>not automatically independent</strong>. Moreover, the naive sample standard deviation of the chain states measures posterior spread, not the Monte Carlo uncertainty of an estimated posterior mean. For the latter, accounting for temporal dependence is essential.</p>
+</section>
+<section id="where-this-leads-next" class="level2" data-number="12">
+<h2 data-number="12" class="anchored" data-anchor-id="where-this-leads-next"><span class="header-section-number">12</span> Where this leads next</h2>
+<p>Metropolis–Hastings is a general framework: it only requires a tractable target-density ratio and a proposal mechanism. Its main practical challenge is choosing proposals that explore efficiently.</p>
+<ul>
+<li><strong>Gibbs sampling</strong> draws from full conditional distributions. It can be viewed as a special MH update with acceptance probability one when the full conditional is sampled exactly.</li>
+<li><strong>Hamiltonian Monte Carlo (HMC)</strong> uses gradients and simulated Hamiltonian dynamics to propose distant, structured moves. It can work much better than a naive random walk for smooth, high-dimensional posteriors.</li>
+<li><strong>Modern adaptive samplers</strong> tune important algorithm parameters during warm-up, while maintaining the conditions necessary for correct inference.</li>
+</ul>
+<p>None is universally superior. Gibbs can also mix poorly across correlated variables or separated modes; HMC requires gradients and must contend with challenging geometry and disconnected modes.</p>
+</section>
+<section id="exercises" class="level2" data-number="13">
+<h2 data-number="13" class="anchored" data-anchor-id="exercises"><span class="header-section-number">13</span> Exercises</h2>
+<ol type="1">
+<li><strong>Detailed balance.</strong> Starting with <img src="https://latex.codecogs.com/png.latex?%5Calpha(x,x')=%5Cmin%5C%7B1,r(x,x')%5C%7D">, separately verify detailed balance in the two cases <img src="https://latex.codecogs.com/png.latex?r%5Cle1"> and <img src="https://latex.codecogs.com/png.latex?r%3E1">.</li>
+<li><strong>Proposal tuning.</strong> For <img src="https://latex.codecogs.com/png.latex?s%5Cin%5C%7B0.1,0.5,1.5,4,10%5C%7D">, report acceptance rate and estimated ESS for the sample mean. Why does the largest acceptance rate not necessarily win?</li>
+<li><strong>Mode occupancy.</strong> For the mixture centered at <img src="https://latex.codecogs.com/png.latex?%5Cpm2">, estimate <img src="https://latex.codecogs.com/png.latex?%5CPr(X%3E0)"> with several chains; compare against the exact value <img src="https://latex.codecogs.com/png.latex?1/2">. Repeat for modes centered at <img src="https://latex.codecogs.com/png.latex?%5Cpm8">.</li>
+<li><strong>Asymmetric proposal.</strong> Replace the random walk with <img src="https://latex.codecogs.com/png.latex?q(x'%5Cmid%20x)=%5Cmathcal%20N(x+%5Cdelta,s%5E2)">. Derive and implement <code>log_proposal(to_x, from_x)</code>, then compare results with and without the Hastings correction.</li>
+<li><strong>Bayesian inference.</strong> Change <img src="https://latex.codecogs.com/png.latex?n">, <img src="https://latex.codecogs.com/png.latex?%5Csigma">, and the prior scale <img src="https://latex.codecogs.com/png.latex?%5Ctau_0">. Predict how the posterior uncertainty changes, then compare the exact and MCMC estimates.</li>
+<li><strong>Uncertainty of an estimate.</strong> Compare the naive independent-sample standard error of the posterior mean with an autocorrelation-adjusted estimate. Explain which assumptions each requires.</li>
+</ol>
+</section>
+<section id="key-takeaways" class="level2" data-number="14">
+<h2 data-number="14" class="anchored" data-anchor-id="key-takeaways"><span class="header-section-number">14</span> Key takeaways</h2>
+<p>Metropolis–Hastings turns <strong>pointwise evaluation</strong> of an unnormalized density into a mechanism for <strong>sampling from its normalized distribution</strong>, without computing the normalizer. The acceptance probability is not an arbitrary rule: it is a constructive way to enforce detailed balance. But <strong>correct stationary distribution</strong>, <strong>fast mixing</strong>, and <strong>trustworthy finite-sample estimates</strong> are three distinct issues. The last two demand diagnostics and careful computational practice.</p>
+</section>
+<section id="references-and-further-reading" class="level2" data-number="15">
+<h2 data-number="15" class="anchored" data-anchor-id="references-and-further-reading"><span class="header-section-number">15</span> References and further reading</h2>
+<ol type="1">
+<li>Metropolis, N., Rosenbluth, A. W., Rosenbluth, M. N., Teller, A. H., &amp; Teller, E. (1953). <em>Equation of State Calculations by Fast Computing Machines</em>. Journal of Chemical Physics, 21, 1087–1092. https://doi.org/10.1063/1.1699114</li>
+<li>Hastings, W. K. (1970). <em>Monte Carlo Sampling Methods Using Markov Chains and Their Applications</em>. Biometrika, 57(1), 97–109. https://doi.org/10.1093/biomet/57.1.97</li>
+<li>Roberts, G. O., Gelman, A., &amp; Gilks, W. R. (1997). <em>Weak Convergence and Optimal Scaling of Random Walk Metropolis Algorithms</em>. Annals of Applied Probability, 7(1), 110–120. https://doi.org/10.1214/aoap/1034625254</li>
+<li>Vehtari, A., Gelman, A., Simpson, D., Carpenter, B., &amp; Bürkner, P.-C. (2021). <em>Rank-Normalization, Folding, and Localization: An Improved <img src="https://latex.codecogs.com/png.latex?%5Cwidehat%20R"> for Assessing Convergence of MCMC</em>. Bayesian Analysis, 16(2), 667–718. https://doi.org/10.1214/20-BA1221</li>
+<li>Betancourt, M. (2017). <em>A Conceptual Introduction to Hamiltonian Monte Carlo</em>. https://arxiv.org/abs/1701.02434</li>
+</ol>
 
 
 </section>
@@ -1514,9 +3444,9 @@ return samples</code></pre>
   <category>Probability</category>
   <category>Statistical Computing</category>
   <category>Python</category>
-  <category>R</category>
   <category>Mathematics</category>
-  <guid>https://anantkumar.online/posts/markov-chain/mcmc.html</guid>
+  <category>Bayesian Inference</category>
+  <guid>https://anantkumar.online/posts/markov-chain/</guid>
   <pubDate>Thu, 28 May 2026 18:30:00 GMT</pubDate>
 </item>
 <item>

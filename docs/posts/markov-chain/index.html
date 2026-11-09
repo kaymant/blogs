@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-05-29">
+<meta name="description" content="An executable, mathematically grounded introduction to Metropolis–Hastings, with detailed balance, log-domain implementation, convergence diagnostics, proposal tuning, and Bayesian inference.">
+
+<title>MCMC from Scratch: The Metropolis–Hastings Algorithm – Anant’s Blog</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../posts/matrix-multiplication-benchmarking/index.html" rel="next">
+<link href="../../favicon/favicon.ico" rel="icon">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-eefa827e8e41d0dbfce91d7907d736a5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Anant’s Blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../resources.html"> 
+<span class="menu-text">Resources</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/kaymant"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.linkedin.com/in/an-ant/"> <i class="bi bi-linkedin" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.youtube.com/@AnantKumarPlus"> <i class="bi bi-youtube" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Recent Posts</li><li class="breadcrumb-item"><a href="../../posts/markov-chain/index.html">Posts</a></li><li class="breadcrumb-item"><a href="../../posts/markov-chain/index.html">MCMC from Scratch: The Metropolis–Hastings Algorithm</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Recent Posts</li><li class="breadcrumb-item"><a href="../../posts/markov-chain/index.html">Posts</a></li><li class="breadcrumb-item"><a href="../../posts/markov-chain/index.html">MCMC from Scratch: The Metropolis–Hastings Algorithm</a></li></ol></nav>
+      <h1 class="title">MCMC from Scratch: The Metropolis–Hastings Algorithm</h1>
+            <p class="subtitle lead">Why it works, when it fails, and how to diagnose a Markov chain</p>
+                  <div>
+        <div class="description">
+          An executable, mathematically grounded introduction to Metropolis–Hastings, with detailed balance, log-domain implementation, convergence diagnostics, proposal tuning, and Bayesian inference.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">Data Science</div>
+                <div class="quarto-category">Probability</div>
+                <div class="quarto-category">Statistical Computing</div>
+                <div class="quarto-category">Python</div>
+                <div class="quarto-category">Mathematics</div>
+                <div class="quarto-category">Bayesian Inference</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">May 29, 2026</p>
+      </div>
+    </div>
+    
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">November 9, 2026</p>
+      </div>
+    </div>
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Recent Posts</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Posts</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/markov-chain/index.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">MCMC from Scratch: The Metropolis–Hastings Algorithm</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/matrix-multiplication-benchmarking/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">From Scratch: Optimizing Matrix Multiplication in C</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/contour-plots/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Visualizing Functions with Contour Plots</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/integrating-R-and-latex/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Integrating R with LaTeX using <code>knitr</code></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/pseudorandom-num-generators/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Pseudorandom Number Generators: Linear Congruential Generators</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/monte-carlo-random-stick-break/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Breaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/importance-sampling/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Variance Reduction: A Guide to Importance Sampling and Beyond</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/generating-other-dist/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generating Other Distributions from Uniform Random Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/edge-detection-computer-vision/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Edge Detection for Computer Vision</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#from-monte-carlo-integration-to-mcmc" id="toc-from-monte-carlo-integration-to-mcmc" class="nav-link active" data-scroll-target="#from-monte-carlo-integration-to-mcmc"><span class="header-section-number">1</span> From Monte Carlo integration to MCMC</a></li>
+  <li><a href="#what-makes-a-markov-chain-useful-for-sampling" id="toc-what-makes-a-markov-chain-useful-for-sampling" class="nav-link" data-scroll-target="#what-makes-a-markov-chain-useful-for-sampling"><span class="header-section-number">2</span> What makes a Markov chain useful for sampling?</a></li>
+  <li><a href="#deriving-the-metropolishastings-rule" id="toc-deriving-the-metropolishastings-rule" class="nav-link" data-scroll-target="#deriving-the-metropolishastings-rule"><span class="header-section-number">3</span> Deriving the Metropolis–Hastings rule</a>
+  <ul class="collapse">
+  <li><a href="#symmetric-proposals-the-metropolis-special-case" id="toc-symmetric-proposals-the-metropolis-special-case" class="nav-link" data-scroll-target="#symmetric-proposals-the-metropolis-special-case"><span class="header-section-number">3.1</span> Symmetric proposals: the Metropolis special case</a></li>
+  <li><a href="#asymmetric-proposals-need-the-hastings-correction" id="toc-asymmetric-proposals-need-the-hastings-correction" class="nav-link" data-scroll-target="#asymmetric-proposals-need-the-hastings-correction"><span class="header-section-number">3.2</span> Asymmetric proposals need the Hastings correction</a></li>
+  <li><a href="#why-we-compute-in-the-log-domain" id="toc-why-we-compute-in-the-log-domain" class="nav-link" data-scroll-target="#why-we-compute-in-the-log-domain"><span class="header-section-number">3.3</span> Why we compute in the log domain</a></li>
+  </ul></li>
+  <li><a href="#implement-metropolishastings-from-scratch" id="toc-implement-metropolishastings-from-scratch" class="nav-link" data-scroll-target="#implement-metropolishastings-from-scratch"><span class="header-section-number">4</span> Implement Metropolis–Hastings from scratch</a></li>
+  <li><a href="#first-experiment-a-bimodal-target" id="toc-first-experiment-a-bimodal-target" class="nav-link" data-scroll-target="#first-experiment-a-bimodal-target"><span class="header-section-number">5</span> First experiment: a bimodal target</a></li>
+  <li><a href="#proposal-scale-a-trade-off-between-movement-and-acceptance" id="toc-proposal-scale-a-trade-off-between-movement-and-acceptance" class="nav-link" data-scroll-target="#proposal-scale-a-trade-off-between-movement-and-acceptance"><span class="header-section-number">6</span> Proposal scale: a trade-off between movement and acceptance</a></li>
+  <li><a href="#why-sample-count-is-not-effective-sample-size" id="toc-why-sample-count-is-not-effective-sample-size" class="nav-link" data-scroll-target="#why-sample-count-is-not-effective-sample-size"><span class="header-section-number">7</span> Why sample count is not effective sample size</a></li>
+  <li><a href="#multiple-chains-can-reveal-hidden-problems" id="toc-multiple-chains-can-reveal-hidden-problems" class="nav-link" data-scroll-target="#multiple-chains-can-reveal-hidden-problems"><span class="header-section-number">8</span> Multiple chains can reveal hidden problems</a></li>
+  <li><a href="#a-failure-case-separated-modes" id="toc-a-failure-case-separated-modes" class="nav-link" data-scroll-target="#a-failure-case-separated-modes"><span class="header-section-number">9</span> A failure case: separated modes</a></li>
+  <li><a href="#a-bayesian-example-inferring-an-unknown-mean" id="toc-a-bayesian-example-inferring-an-unknown-mean" class="nav-link" data-scroll-target="#a-bayesian-example-inferring-an-unknown-mean"><span class="header-section-number">10</span> A Bayesian example: inferring an unknown mean</a></li>
+  <li><a href="#common-mistakes-and-their-consequences" id="toc-common-mistakes-and-their-consequences" class="nav-link" data-scroll-target="#common-mistakes-and-their-consequences"><span class="header-section-number">11</span> Common mistakes and their consequences</a></li>
+  <li><a href="#where-this-leads-next" id="toc-where-this-leads-next" class="nav-link" data-scroll-target="#where-this-leads-next"><span class="header-section-number">12</span> Where this leads next</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises"><span class="header-section-number">13</span> Exercises</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways"><span class="header-section-number">14</span> Key takeaways</a></li>
+  <li><a href="#references-and-further-reading" id="toc-references-and-further-reading" class="nav-link" data-scroll-target="#references-and-further-reading"><span class="header-section-number">15</span> References and further reading</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<p>In our previous exploration of <strong>importance sampling</strong>, we saw how changing the sampling distribution can reduce the variance of a Monte Carlo estimator. But importance sampling works best when we can find a tractable proposal distribution that adequately covers the important regions of the target. In difficult, high-dimensional, or multimodal problems, constructing such a proposal can be challenging. Its weights may become extremely uneven, leaving very few effectively useful samples.</p>
+<p><strong>Markov chain Monte Carlo (MCMC)</strong> takes a different approach. Instead of drawing independent samples from a fixed global proposal and reweighting them, we construct a <em>dependent sequence</em> whose long-run distribution is the target. The best-known starting point is the <strong>Metropolis–Hastings (MH) algorithm</strong>.</p>
+<p>This article develops the underlying mathematics, implements MH without an MCMC library, explores a bimodal distribution, and explains why a histogram alone is insufficient evidence of convergence. We finish with a small Bayesian inference example.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>What we will learn
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Why sampling from an <strong>unnormalized</strong> density is possible.</li>
+<li>How the Metropolis–Hastings acceptance rule follows from <strong>detailed balance</strong>.</li>
+<li>How to implement acceptance decisions stably in the <strong>log domain</strong>.</li>
+<li>What tuning, burn-in, autocorrelation, effective sample size (ESS), and multi-chain comparisons tell us.</li>
+<li>Why multimodal targets can defeat an apparently reasonable sampler.</li>
+</ul>
+</div>
+</div>
+<section id="from-monte-carlo-integration-to-mcmc" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="from-monte-carlo-integration-to-mcmc"><span class="header-section-number">1</span> From Monte Carlo integration to MCMC</h2>
+<p>Suppose we want to compute an expectation under a probability density <span class="math inline">\(p\)</span>:</p>
+<p><span class="math display">\[
+\mathbb E_p[f(X)] = \int f(x)p(x)\,dx.
+\]</span></p>
+<p>If we can generate independent observations <span class="math inline">\(X_1,\ldots,X_N\sim p\)</span>, ordinary Monte Carlo uses</p>
+<p><span class="math display">\[
+\widehat{I}_N^{\mathrm{iid}} = \frac{1}{N}\sum_{t=1}^N f(X_t).
+\]</span></p>
+<p>The problem is that evaluating a density and <strong>sampling from that density</strong> are different tasks. For example, a Bayesian posterior often has the form</p>
+<p><span class="math display">\[
+p(\theta\mid y)=\frac{p(y\mid\theta)p(\theta)}{p(y)},
+\qquad p(y)=\int p(y\mid\theta)p(\theta)\,d\theta.
+\]</span></p>
+<p>Computing the normalizing constant <span class="math inline">\(p(y)\)</span> can be difficult, even when the likelihood and prior are easy to evaluate. Let</p>
+<p><span class="math display">\[
+\widetilde p(\theta)=p(y\mid\theta)p(\theta),
+\qquad p(\theta\mid y)\propto\widetilde p(\theta).
+\]</span></p>
+<p>Metropolis–Hastings only needs <strong>ratios of unnormalized densities</strong>: the unknown constant cancels.</p>
+<p>MCMC generates <span class="math inline">\(X_0,X_1,\ldots\)</span> from a Markov transition mechanism and approximates the expectation using</p>
+<p><span class="math display">\[
+\widehat{I}_N^{\mathrm{MCMC}}=\frac1N\sum_{t=1}^{N}f(X_t).
+\]</span></p>
+<p>Unlike ordinary Monte Carlo, the observations are generally correlated. Under suitable ergodicity and integrability assumptions, the ergodic theorem nevertheless gives</p>
+<p><span class="math display">\[
+\widehat{I}_N^{\mathrm{MCMC}}\xrightarrow{\mathrm{a.s.}}\mathbb E_p[f(X)].
+\]</span></p>
+<p>The crucial phrase is <strong>under suitable assumptions</strong>. A valid stationary distribution does not guarantee that a particular short run has explored it well.</p>
+</section>
+<section id="what-makes-a-markov-chain-useful-for-sampling" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="what-makes-a-markov-chain-useful-for-sampling"><span class="header-section-number">2</span> What makes a Markov chain useful for sampling?</h2>
+<p>A process <span class="math inline">\((X_t)_{t\ge0}\)</span> is a Markov chain when its next state depends on the past only through its current state:</p>
+<p><span class="math display">\[
+\Pr(X_{t+1}\in A\mid X_t,X_{t-1},\ldots)
+=\Pr(X_{t+1}\in A\mid X_t).
+\]</span></p>
+<p>A transition kernel <span class="math inline">\(K(x,A)\)</span> gives the probability that the next state lies in a set <span class="math inline">\(A\)</span>, conditional on <span class="math inline">\(X_t=x\)</span>. A distribution <span class="math inline">\(\pi\)</span> is <strong>stationary</strong> if</p>
+<p><span class="math display">\[
+\pi(A)=\int K(x,A)\,\pi(dx)
+\]</span></p>
+<p>for every measurable set <span class="math inline">\(A\)</span>. Informally, if <span class="math inline">\(X_t\sim\pi\)</span>, then <span class="math inline">\(X_{t+1}\sim\pi\)</span> too.</p>
+<p>For MCMC we design <span class="math inline">\(K\)</span> to have our desired target <span class="math inline">\(p\)</span> as a stationary distribution. A particularly convenient sufficient condition is <strong>detailed balance</strong>:</p>
+<p><span class="math display">\[
+\boxed{\pi(dx)K(x,dx')=\pi(dx')K(x',dx).}
+\]</span></p>
+<p>Detailed balance says the equilibrium probability flow from <span class="math inline">\(x\)</span> to <span class="math inline">\(x'\)</span> matches the flow back. Integrating over starting states shows that it implies stationarity. Detailed balance is <strong>sufficient, not necessary</strong>: some valid MCMC methods are nonreversible.</p>
+<p>Having the correct stationary distribution is only part of the story. To converge to a <em>unique</em> target from arbitrary starting points, a chain must also have appropriate accessibility and recurrence properties; in familiar discrete-state settings, irreducibility and aperiodicity are central. For the continuous-state examples below, a Gaussian random-walk proposal with an everywhere-positive target avoids many of these complications. Even then, convergence may be slow.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Modes are not destinations
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>An MCMC sampler should spend time in a region in proportion to its <strong>probability mass</strong>, not merely its peak height. High-density regions can have very little total mass when they are narrow. Consequently, “always climb toward higher density” would be the wrong algorithm.</p>
+</div>
+</div>
+</section>
+<section id="deriving-the-metropolishastings-rule" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="deriving-the-metropolishastings-rule"><span class="header-section-number">3</span> Deriving the Metropolis–Hastings rule</h2>
+<p>At state <span class="math inline">\(x\)</span>, propose a candidate <span class="math inline">\(x'\)</span> from a <strong>proposal density</strong> <span class="math inline">\(q(x'\mid x)\)</span>. Accept the move with probability <span class="math inline">\(\alpha(x,x')\)</span>, otherwise remain at <span class="math inline">\(x\)</span>.</p>
+<p>The off-diagonal part of the resulting transition kernel is</p>
+<p><span class="math display">\[
+K(x,dx')=q(x'\mid x)\alpha(x,x')\,dx',\qquad x'\ne x.
+\]</span></p>
+<p>The probability of staying put contains the mass of <strong>rejected proposals</strong>. It is essential to record the repeated current state after a rejection: deleting repeats changes the distribution represented by the chain.</p>
+<p>To satisfy detailed balance between distinct states, we seek</p>
+<p><span class="math display">\[
+p(x)q(x'\mid x)\alpha(x,x')
+=p(x')q(x\mid x')\alpha(x',x).
+\]</span></p>
+<p>Define the ratio</p>
+<p><span class="math display">\[
+r(x,x')=\frac{\widetilde p(x')q(x\mid x')}
+{\widetilde p(x)q(x'\mid x)}.
+\]</span></p>
+<p>The Metropolis–Hastings choice is</p>
+<p><span class="math display">\[
+\boxed{\alpha(x,x')=\min\{1,r(x,x')\}.}
+\]</span></p>
+<p>To verify it, write</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(x)q(x'\mid x)\alpha(x,x')
+&amp;=\min\{p(x)q(x'\mid x),\ p(x')q(x\mid x')\}\\
+&amp;=p(x')q(x\mid x')\alpha(x',x).
+\end{aligned}
+\]</span></p>
+<p>The equality works because the same normalizing constant multiplies <span class="math inline">\(p(x)\)</span> and <span class="math inline">\(p(x')\)</span>. Hence the proposed rule satisfies detailed balance and therefore preserves the target distribution.</p>
+<p>This argument assumes the ratio is evaluated wherever proposals and target densities make it meaningful. A practical implementation must respect the target’s support and handle zero-density states carefully.</p>
+<section id="symmetric-proposals-the-metropolis-special-case" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="symmetric-proposals-the-metropolis-special-case"><span class="header-section-number">3.1</span> Symmetric proposals: the Metropolis special case</h3>
+<p>If <span class="math inline">\(q(x'\mid x)=q(x\mid x')\)</span>, the proposal terms cancel:</p>
+<p><span class="math display">\[
+\boxed{\alpha(x,x')=\min\left\{1,\frac{\widetilde p(x')}{\widetilde p(x)}\right\}.}
+\]</span></p>
+<p>A Gaussian random walk is a standard example:</p>
+<p><span class="math display">\[
+X'=X_t+\varepsilon_t,\qquad
+\varepsilon_t\sim\mathcal N(0,s^2).
+\]</span></p>
+<p>A move to a higher-density state is always accepted. A move to a lower-density state may also be accepted, which allows exploration beyond local maxima. <strong>That possibility does not guarantee timely transitions between widely separated modes.</strong></p>
+</section>
+<section id="asymmetric-proposals-need-the-hastings-correction" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="asymmetric-proposals-need-the-hastings-correction"><span class="header-section-number">3.2</span> Asymmetric proposals need the Hastings correction</h3>
+<p>For a general proposal, such as a drifted Gaussian <span class="math inline">\(q(x'\mid x)=\mathcal N(x+\delta,s^2)\)</span>, one cannot cancel the <span class="math inline">\(q\)</span> factors. Omitting</p>
+<p><span class="math display">\[
+\frac{q(x\mid x')}{q(x'\mid x)}
+\]</span></p>
+<p>would generally produce the wrong stationary distribution. Later we will implement the full formula for arbitrary log proposals.</p>
+</section>
+<section id="why-we-compute-in-the-log-domain" class="level3" data-number="3.3">
+<h3 data-number="3.3" class="anchored" data-anchor-id="why-we-compute-in-the-log-domain"><span class="header-section-number">3.3</span> Why we compute in the log domain</h3>
+<p>A direct computation of <span class="math inline">\(\widetilde p(x')/\widetilde p(x)\)</span> can overflow or underflow, particularly when densities are products of many small likelihood terms. Instead calculate</p>
+<p><span class="math display">\[
+\log r
+=\log\widetilde p(x')-\log\widetilde p(x)
++\log q(x\mid x')-\log q(x'\mid x).
+\]</span></p>
+<p>Draw <span class="math inline">\(U\sim\mathrm{Uniform}(0,1)\)</span> and accept precisely when</p>
+<p><span class="math display">\[
+\boxed{\log U&lt;\min\{0,\log r\}.}
+\]</span></p>
+<p>No exponentiation of potentially extreme log densities is needed.</p>
+</section>
+</section>
+<section id="implement-metropolishastings-from-scratch" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="implement-metropolishastings-from-scratch"><span class="header-section-number">4</span> Implement Metropolis–Hastings from scratch</h2>
+<p>We’ll use NumPy for randomness and Matplotlib for plots. The following implementation supports symmetric proposals by default, while allowing a log-proposal function for asymmetric cases. A single random-number generator is passed explicitly for reproducibility.</p>
+<div id="setup" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>SEED <span class="op">=</span> <span class="dv">42</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(SEED)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> metropolis_hastings(log_target, initial, n_steps, proposal_scale,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>                        rng, log_proposal<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""One-dimensional random-walk MH with optional proposal correction.</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">    log_target(x): unnormalized log density at scalar x</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">    log_proposal(to_x, from_x): log q(to_x | from_x)</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">    The default is a symmetric N(current, proposal_scale**2) proposal.</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> n_steps <span class="op">&lt;</span> <span class="dv">1</span> <span class="kw">or</span> proposal_scale <span class="op">&lt;=</span> <span class="dv">0</span>:</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"n_steps must be positive and proposal_scale &gt; 0"</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    current <span class="op">=</span> <span class="bu">float</span>(initial)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    current_logp <span class="op">=</span> <span class="bu">float</span>(log_target(current))</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.isfinite(current_logp):</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Initial state must have finite log target density"</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    draws <span class="op">=</span> np.empty(n_steps, dtype<span class="op">=</span><span class="bu">float</span>)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    accepted <span class="op">=</span> np.zeros(n_steps, dtype<span class="op">=</span><span class="bu">bool</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> t <span class="kw">in</span> <span class="bu">range</span>(n_steps):</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        proposed <span class="op">=</span> current <span class="op">+</span> rng.normal(<span class="fl">0.0</span>, proposal_scale)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        proposed_logp <span class="op">=</span> <span class="bu">float</span>(log_target(proposed))</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> np.isnan(proposed_logp):</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Target returned NaN"</span>)</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>        log_ratio <span class="op">=</span> proposed_logp <span class="op">-</span> current_logp</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> log_proposal <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>            log_ratio <span class="op">+=</span> (log_proposal(current, proposed)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>                          <span class="op">-</span> log_proposal(proposed, current))</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> np.log(rng.uniform()) <span class="op">&lt;</span> <span class="bu">min</span>(<span class="fl">0.0</span>, log_ratio):</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>            current, current_logp <span class="op">=</span> proposed, proposed_logp</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>            accepted[t] <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>        draws[t] <span class="op">=</span> current  <span class="co"># KEEP repeated states on rejection</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> draws, accepted</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The <span class="math inline">\(t\)</span>-th stored value is the chain’s state <strong>after</strong> proposal <span class="math inline">\(t\)</span>. The initial state is not included in the returned array. Here <code>proposal_scale</code> is the <strong>standard deviation</strong>, not the variance, of the normal increment.</p>
+</section>
+<section id="first-experiment-a-bimodal-target" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="first-experiment-a-bimodal-target"><span class="header-section-number">5</span> First experiment: a bimodal target</h2>
+<p>Consider the unnormalized target from our original example:</p>
+<p><span class="math display">\[
+\widetilde p(x)=e^{-(x-2)^2/2}+e^{-(x+2)^2/2}.
+\]</span></p>
+<p>This is proportional to an equal mixture of <span class="math inline">\(\mathcal N(-2,1)\)</span> and <span class="math inline">\(\mathcal N(2,1)\)</span>. In this particular teaching example, the normalizing constant <em>is</em> analytically available:</p>
+<p><span class="math display">\[
+p(x)=\frac{e^{-(x-2)^2/2}+e^{-(x+2)^2/2}}
+{2\sqrt{2\pi}}
+=\tfrac12\varphi(x;-2,1)+\tfrac12\varphi(x;2,1).
+\]</span></p>
+<p>Knowing the normalizer lets us <strong>validate</strong> the sampler; MH itself does not use it. The true distribution is symmetric, with mean <span class="math inline">\(0\)</span> and variance <span class="math inline">\(1+2^2=5\)</span>.</p>
+<div id="cell-fig-bimodal" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> log_bimodal(x):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># log(exp(a) + exp(b)) without underflow</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> (x <span class="op">-</span> <span class="fl">2.0</span>)<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> (x <span class="op">+</span> <span class="fl">2.0</span>)<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">float</span>(np.logaddexp(a, b))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> bimodal_pdf(x):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (np.exp(<span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> (x <span class="op">-</span> <span class="fl">2.0</span>)<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="op">+</span> np.exp(<span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> (x <span class="op">+</span> <span class="fl">2.0</span>)<span class="op">**</span><span class="dv">2</span>)) <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> np.sqrt(<span class="dv">2</span> <span class="op">*</span> np.pi))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>x_grid <span class="op">=</span> np.linspace(<span class="op">-</span><span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">700</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="fl">3.5</span>))</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>ax.plot(x_grid, bimodal_pdf(x_grid), linewidth<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>ax.<span class="bu">set</span>(xlabel<span class="op">=</span><span class="st">"x"</span>, ylabel<span class="op">=</span><span class="st">"p(x)"</span>, title<span class="op">=</span><span class="st">"Exact normalized target (for validation only)"</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-bimodal" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-bimodal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-bimodal-output-1.png" width="680" height="339" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bimodal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: A bimodal target with modes near -2 and +2; the sampler only uses its unnormalized log density.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Run a random-walk sampler, with <span class="math inline">\(s=1.5\)</span>, for 30,000 updates. This proposal makes relatively local moves. Whether it crosses between the modes often enough must be checked, not assumed.</p>
+<div id="cell-fig-mcmc-trace" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>n_steps <span class="op">=</span> <span class="dv">30_000</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>samples, accepted <span class="op">=</span> metropolis_hastings(</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    log_target<span class="op">=</span>log_bimodal,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    initial<span class="op">=</span><span class="fl">0.0</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    n_steps<span class="op">=</span>n_steps,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    proposal_scale<span class="op">=</span><span class="fl">1.5</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    rng<span class="op">=</span>rng,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>burn <span class="op">=</span> <span class="dv">5_000</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>post <span class="op">=</span> samples[burn:]</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Acceptance proportion: </span><span class="sc">{</span>accepted<span class="sc">.</span>mean()<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Post-warm-up sample mean: </span><span class="sc">{</span>post<span class="sc">.</span>mean()<span class="sc">:.3f}</span><span class="ss"> (target 0)"</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Post-warm-up sample variance: </span><span class="sc">{</span>post<span class="sc">.</span>var(ddof<span class="op">=</span><span class="dv">1</span>)<span class="sc">:.3f}</span><span class="ss"> (target 5)"</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">4</span>))</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].plot(samples, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].axvline(burn, linestyle<span class="op">=</span><span class="st">"--"</span>, color<span class="op">=</span><span class="st">"black"</span>, label<span class="op">=</span><span class="st">"illustrative warm-up"</span>)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].<span class="bu">set</span>(xlabel<span class="op">=</span><span class="st">"Iteration"</span>, ylabel<span class="op">=</span><span class="st">"Current state"</span>, title<span class="op">=</span><span class="st">"Trace"</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].legend()</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].hist(post, bins<span class="op">=</span><span class="dv">65</span>, density<span class="op">=</span><span class="va">True</span>, alpha<span class="op">=</span><span class="fl">0.55</span>, label<span class="op">=</span><span class="st">"Retained states"</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].plot(x_grid, bimodal_pdf(x_grid), linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">"Exact target"</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].<span class="bu">set</span>(xlabel<span class="op">=</span><span class="st">"x"</span>, ylabel<span class="op">=</span><span class="st">"Density"</span>, title<span class="op">=</span><span class="st">"Histogram vs target"</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].legend()</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Acceptance proportion: 0.682
+Post-warm-up sample mean: -0.076 (target 0)
+Post-warm-up sample variance: 5.128 (target 5)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-mcmc-trace" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-mcmc-trace-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-mcmc-trace-output-2.png" width="1142" height="374" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-mcmc-trace-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: A trace plot and histogram of a bimodal-target MH run. Neither plot alone establishes convergence.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The <code>burn = 5000</code> choice is <strong>illustrative</strong>, not a mathematically justified universal burn-in rule. We retain the same value for later comparisons. Samples after warm-up remain dependent, and discarding early states does not automatically cure poor mixing.</p>
+</section>
+<section id="proposal-scale-a-trade-off-between-movement-and-acceptance" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="proposal-scale-a-trade-off-between-movement-and-acceptance"><span class="header-section-number">6</span> Proposal scale: a trade-off between movement and acceptance</h2>
+<p>A small Gaussian proposal yields many accepted moves but may explore slowly. An excessively large proposal may suggest mostly implausible states, causing frequent rejections. The goal is <strong>efficient exploration</strong>, not maximum acceptance.</p>
+<div id="cell-fig-proposal-comparison" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>scales <span class="op">=</span> [<span class="fl">0.15</span>, <span class="fl">1.5</span>, <span class="fl">8.0</span>]</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">3</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">6</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, scale <span class="kw">in</span> <span class="bu">zip</span>(axes, scales):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    chain, moves <span class="op">=</span> metropolis_hastings(</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        log_bimodal, initial<span class="op">=-</span><span class="fl">2.0</span>, n_steps<span class="op">=</span><span class="dv">4000</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        proposal_scale<span class="op">=</span>scale, rng<span class="op">=</span>np.random.default_rng(<span class="dv">1000</span> <span class="op">+</span> <span class="bu">int</span>(scale <span class="op">*</span> <span class="dv">100</span>)))</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    ax.plot(chain, linewidth<span class="op">=</span><span class="fl">0.6</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">"x"</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="ss">f"Scale </span><span class="sc">{</span>scale<span class="sc">:g}</span><span class="ss"> | acceptance </span><span class="sc">{</span>moves<span class="sc">.</span>mean()<span class="sc">:.2f}</span><span class="ss">"</span>, fontsize<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>axes[<span class="op">-</span><span class="dv">1</span>].set_xlabel(<span class="st">"Iteration"</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-proposal-comparison" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-proposal-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-proposal-comparison-output-1.png" width="950" height="566" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-proposal-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: How the random-walk scale affects acceptance and trajectories on the same target.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>For smooth, approximately Gaussian targets in high dimensions, an acceptance proportion around <span class="math inline">\(0.234\)</span> appears in a well-known <strong>asymptotic optimal-scaling result</strong> for certain random-walk Metropolis algorithms. It is <strong>not</strong> a universal acceptance target, especially not for this one-dimensional bimodal example. In practice, compare estimates and autocorrelation or effective sample size across sensible proposal scales.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Should we adapt the proposal scale during the run?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Tuning a proposal during an initial <em>warm-up</em> stage, freezing the tuned value, and then collecting inference draws is a straightforward strategy. Adapting indefinitely requires additional mathematical conditions; naively changing the proposal at every step can invalidate standard stationary-chain reasoning.</p>
+</div>
+</div>
+</section>
+<section id="why-sample-count-is-not-effective-sample-size" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="why-sample-count-is-not-effective-sample-size"><span class="header-section-number">7</span> Why sample count is not effective sample size</h2>
+<p>If sequential draws were independent, <span class="math inline">\(N\)</span> samples would provide the usual Monte Carlo variance reduction. MCMC samples are correlated. For a scalar quantity <span class="math inline">\(f(X_t)\)</span>, let <span class="math inline">\(\rho_f(k)\)</span> be its lag-<span class="math inline">\(k\)</span> autocorrelation. When the sum converges appropriately, define the <strong>integrated autocorrelation time</strong></p>
+<p><span class="math display">\[
+\tau_{\mathrm{int},f}=1+2\sum_{k=1}^{\infty}\rho_f(k),
+\]</span></p>
+<p>and its associated asymptotic effective sample size</p>
+<p><span class="math display">\[
+\boxed{N_{\mathrm{eff},f}\approx\frac{N}{\tau_{\mathrm{int},f}}.}
+\]</span></p>
+<p>Under a suitable Markov-chain central limit theorem,</p>
+<p><span class="math display">\[
+\operatorname{Var}(\widehat I_N)\approx
+\frac{\operatorname{Var}_p(f(X))\tau_{\mathrm{int},f}}{N}.
+\]</span></p>
+<p>ESS depends on the statistic <span class="math inline">\(f\)</span>: a chain might estimate the mean well but estimate a rare-tail probability poorly. A very negative autocorrelation can even yield ESS greater than the nominal sample count under some conventions. The simple implementation below estimates autocorrelation directly for a <strong>demonstration</strong>; robust production ESS estimators require more care.</p>
+<div id="cell-fig-autocorrelation" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> autocorrelation(x, max_lag<span class="op">=</span><span class="dv">100</span>):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> np.asarray(x, dtype<span class="op">=</span><span class="bu">float</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span>(x) <span class="op">&lt;=</span> max_lag:</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Need more observations than max_lag"</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    centered <span class="op">=</span> x <span class="op">-</span> x.mean()</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    var0 <span class="op">=</span> np.dot(centered, centered)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> var0 <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> np.full(max_lag <span class="op">+</span> <span class="dv">1</span>, np.nan)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.array([np.dot(centered[:<span class="bu">len</span>(x)<span class="op">-</span>k], centered[k:]) <span class="op">/</span> var0</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                     <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(max_lag <span class="op">+</span> <span class="dv">1</span>)])</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>acf <span class="op">=</span> autocorrelation(post, <span class="dv">100</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="fl">3.5</span>))</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>ax.plot(<span class="bu">range</span>(<span class="bu">len</span>(acf)), acf, marker<span class="op">=</span><span class="st">"."</span>, markersize<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>ax.axhline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linewidth<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>ax.<span class="bu">set</span>(xlabel<span class="op">=</span><span class="st">"Lag"</span>, ylabel<span class="op">=</span><span class="st">"Autocorrelation"</span>, title<span class="op">=</span><span class="st">"Autocorrelation of x"</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-autocorrelation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-autocorrelation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-autocorrelation-output-1.png" width="738" height="339" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-autocorrelation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Estimated autocorrelation of the retained bimodal-chain states.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>A crude finite-lag estimate is sometimes informative but can be unstable or misleading, especially when mode switching is rare. Here we use a common <strong>initial-positive-pairs</strong> heuristic for a quick ESS indication, not as a substitute for well-tested diagnostic software.</p>
+<div id="ess-calculation" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> illustrative_ess(x, max_lag<span class="op">=</span><span class="dv">1000</span>):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    max_lag <span class="op">=</span> <span class="bu">min</span>(max_lag, <span class="bu">len</span>(x) <span class="op">-</span> <span class="dv">1</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    rho <span class="op">=</span> autocorrelation(x, max_lag)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.<span class="bu">all</span>(np.isfinite(rho)):</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">float</span>(<span class="st">"nan"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sum adjacent positive autocorrelation pairs; truncate at the first</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># nonpositive pair to avoid unstable long-lag noise.</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    pair_sums <span class="op">=</span> []</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, max_lag, <span class="dv">2</span>):</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> k <span class="op">+</span> <span class="dv">1</span> <span class="op">&gt;</span> max_lag:</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        pair <span class="op">=</span> rho[k] <span class="op">+</span> rho[k <span class="op">+</span> <span class="dv">1</span>]</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pair <span class="op">&lt;=</span> <span class="dv">0</span>:</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>        pair_sums.append(pair)</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    tau <span class="op">=</span> <span class="bu">max</span>(<span class="fl">1.0</span>, <span class="fl">1.0</span> <span class="op">+</span> <span class="fl">2.0</span> <span class="op">*</span> <span class="bu">sum</span>(pair_sums))</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">len</span>(x) <span class="op">/</span> tau</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Crude ESS for x: </span><span class="sc">{</span>illustrative_ess(post)<span class="sc">:.0f}</span><span class="ss"> of </span><span class="sc">{</span><span class="bu">len</span>(post)<span class="sc">}</span><span class="ss"> retained states"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Crude ESS for x: 1415 of 25000 retained states</code></pre>
+</div>
+</div>
+<p><strong>Thinning</strong> (retaining only every <span class="math inline">\(k\)</span>-th draw) typically throws away information and is not a general solution to autocorrelation. It can be useful to control storage or downstream computation, but improving the transition mechanism is usually preferable when possible.</p>
+</section>
+<section id="multiple-chains-can-reveal-hidden-problems" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="multiple-chains-can-reveal-hidden-problems"><span class="header-section-number">8</span> Multiple chains can reveal hidden problems</h2>
+<p>One trajectory may look stationary while remaining confined to one mode. A simple diagnostic is to run several independent chains from <strong>dispersed initial values</strong> and compare their behavior. For this symmetric mixture, each mode should ultimately receive about half the probability mass.</p>
+<div id="cell-fig-multiple-chains" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>starts <span class="op">=</span> [<span class="op">-</span><span class="fl">5.0</span>, <span class="op">-</span><span class="fl">2.0</span>, <span class="fl">2.0</span>, <span class="fl">5.0</span>]</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>chains <span class="op">=</span> []</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">4</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">7</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, (start, ax) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">zip</span>(starts, axes)):</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    chain, _ <span class="op">=</span> metropolis_hastings(</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        log_bimodal, initial<span class="op">=</span>start, n_steps<span class="op">=</span><span class="dv">8000</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        proposal_scale<span class="op">=</span><span class="fl">1.5</span>, rng<span class="op">=</span>np.random.default_rng(SEED <span class="op">+</span> <span class="dv">10</span> <span class="op">+</span> i))</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    chains.append(chain[<span class="dv">1000</span>:])</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    ax.plot(chain, linewidth<span class="op">=</span><span class="fl">0.6</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    ax.<span class="bu">set</span>(ylabel<span class="op">=</span><span class="st">"x"</span>, title<span class="op">=</span><span class="ss">f"Start at x = </span><span class="sc">{</span>start<span class="sc">:g}</span><span class="ss">"</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>axes[<span class="op">-</span><span class="dv">1</span>].set_xlabel(<span class="st">"Iteration"</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, chain <span class="kw">in</span> <span class="bu">enumerate</span>(chains, start<span class="op">=</span><span class="dv">1</span>):</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Chain </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">: mean=</span><span class="sc">{</span>chain<span class="sc">.</span>mean()<span class="sc">:+.3f}</span><span class="ss">, P(x&gt;0)=</span><span class="sc">{</span>np<span class="sc">.</span>mean(chain<span class="op">&gt;</span><span class="dv">0</span>)<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-multiple-chains" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-multiple-chains-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-multiple-chains-output-1.png" width="950" height="662" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-multiple-chains-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Four chains starting from different locations; agreement improves confidence but cannot prove convergence.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Chain 1: mean=+0.070, P(x&gt;0)=0.509
+Chain 2: mean=+0.018, P(x&gt;0)=0.502
+Chain 3: mean=+0.021, P(x&gt;0)=0.503
+Chain 4: mean=+0.050, P(x&gt;0)=0.507</code></pre>
+</div>
+</div>
+<p>A common formal comparison is the <strong>potential scale reduction statistic</strong>, <span class="math inline">\(\widehat R\)</span>. The classical version compares between-chain and within-chain variation. With <span class="math inline">\(m\)</span> equal-length chains of length <span class="math inline">\(n\)</span>, let <span class="math inline">\(W\)</span> be the mean within-chain variance, <span class="math inline">\(B=n\operatorname{Var}(\overline X_1,\ldots,\overline X_m)\)</span>, and</p>
+<p><span class="math display">\[
+\widehat V=\frac{n-1}{n}W+\frac{B}{n},
+\qquad
+\widehat R_{\mathrm{classical}}=\sqrt{\frac{\widehat V}{W}}.
+\]</span></p>
+<div id="rhat-classical" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> classical_rhat(chains):</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    arr <span class="op">=</span> np.asarray(chains, dtype<span class="op">=</span><span class="bu">float</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> arr.ndim <span class="op">!=</span> <span class="dv">2</span> <span class="kw">or</span> arr.shape[<span class="dv">0</span>] <span class="op">&lt;</span> <span class="dv">2</span> <span class="kw">or</span> arr.shape[<span class="dv">1</span>] <span class="op">&lt;</span> <span class="dv">2</span>:</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Expected at least two chains of equal length"</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    m, n <span class="op">=</span> arr.shape</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    chain_means <span class="op">=</span> arr.mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    W <span class="op">=</span> arr.var(axis<span class="op">=</span><span class="dv">1</span>, ddof<span class="op">=</span><span class="dv">1</span>).mean()</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    B <span class="op">=</span> n <span class="op">*</span> chain_means.var(ddof<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">float</span>(np.sqrt((((n <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> n) <span class="op">*</span> W <span class="op">+</span> B <span class="op">/</span> n) <span class="op">/</span> W))</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Classical R-hat (demonstration): </span><span class="sc">{</span>classical_rhat(chains)<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Classical R-hat (demonstration): 1.000</code></pre>
+</div>
+</div>
+<p>This code deliberately computes the <strong>classical</strong> statistic for transparency. For serious Bayesian analysis, prefer <strong>rank-normalized, split, folded <span class="math inline">\(\widehat R\)</span></strong>, alongside bulk and tail ESS; the modern diagnostic detects problems that the classical version can miss. Values close to <span class="math inline">\(1\)</span> are desirable, but a small value is <strong>not proof of convergence</strong>. As a common practice, values above approximately <span class="math inline">\(1.01\)</span> warrant investigation with modern rank-based <span class="math inline">\(\widehat R\)</span>.</p>
+</section>
+<section id="a-failure-case-separated-modes" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="a-failure-case-separated-modes"><span class="header-section-number">9</span> A failure case: separated modes</h2>
+<p>Even a mathematically valid MH chain may cross a low-density valley only extremely rarely. Consider</p>
+<p><span class="math display">\[
+p_{\mathrm{far}}(x)=\tfrac12\varphi(x;-8,1)+\tfrac12\varphi(x;8,1).
+\]</span></p>
+<p>A local random-walk proposal can spend the entire experiment in one mode. This is a <strong>mixing failure</strong>, even if acceptance is high and the trace looks stable.</p>
+<div id="cell-fig-failed-mixing" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> log_far_modes(x):</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">float</span>(np.logaddexp(<span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> (x <span class="op">+</span> <span class="fl">8.0</span>)<span class="op">**</span><span class="dv">2</span>,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>                              <span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> (x <span class="op">-</span> <span class="fl">8.0</span>)<span class="op">**</span><span class="dv">2</span>))</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>far_chain, far_accept <span class="op">=</span> metropolis_hastings(</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    log_far_modes, initial<span class="op">=-</span><span class="fl">8.0</span>, n_steps<span class="op">=</span><span class="dv">12000</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    proposal_scale<span class="op">=</span><span class="fl">1.0</span>, rng<span class="op">=</span>np.random.default_rng(<span class="dv">122</span>))</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="fl">3.5</span>))</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>ax.plot(far_chain, linewidth<span class="op">=</span><span class="fl">0.7</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>ax.axhline(<span class="fl">8.0</span>, linestyle<span class="op">=</span><span class="st">"--"</span>, label<span class="op">=</span><span class="st">"other mode (+8)"</span>)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>ax.<span class="bu">set</span>(xlabel<span class="op">=</span><span class="st">"Iteration"</span>, ylabel<span class="op">=</span><span class="st">"x"</span>, title<span class="op">=</span><span class="st">"A potentially misleading trace"</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>ax.legend()</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Acceptance: </span><span class="sc">{</span>far_accept<span class="sc">.</span>mean()<span class="sc">:.3f}</span><span class="ss">; fraction x &gt; 0: </span><span class="sc">{</span>np<span class="sc">.</span>mean(far_chain <span class="op">&gt;</span> <span class="dv">0</span>)<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-failed-mixing" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-failed-mixing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-failed-mixing-output-1.png" width="757" height="339" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-failed-mixing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Separated modes: a local random walk can remain trapped near its initial mode for a long run.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Acceptance: 0.704; fraction x &gt; 0: 0.000</code></pre>
+</div>
+</div>
+<p>When different chains are stuck in different modes, their means and occupancy probabilities disagree. Potential remedies include better-scaled or nonlocal proposals, parallel tempering, specialized multimodal methods, or reparameterization. Simply increasing the number of steps is not always computationally feasible.</p>
+</section>
+<section id="a-bayesian-example-inferring-an-unknown-mean" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="a-bayesian-example-inferring-an-unknown-mean"><span class="header-section-number">10</span> A Bayesian example: inferring an unknown mean</h2>
+<p>Suppose we observe <span class="math inline">\(y_1,\ldots,y_n\mid\mu\stackrel{\mathrm{iid}}\sim\mathcal N(\mu,\sigma^2)\)</span> with known <span class="math inline">\(\sigma\)</span>, and place a prior <span class="math inline">\(\mu\sim\mathcal N(\mu_0,\tau_0^2)\)</span>. Up to an additive constant, the log posterior is</p>
+<p><span class="math display">\[
+\log\widetilde p(\mu\mid y)
+=-\frac1{2\sigma^2}\sum_{i=1}^n(y_i-\mu)^2
+  -\frac{(\mu-\mu_0)^2}{2\tau_0^2}.
+\]</span></p>
+<p>For this conjugate example, the posterior is known analytically:</p>
+<p><span class="math display">\[
+\tau_n^2=\left(\frac1{\tau_0^2}+\frac n{\sigma^2}\right)^{-1},
+\qquad
+\mu_n=\tau_n^2\left(\frac{\mu_0}{\tau_0^2}
++\frac{\sum_i y_i}{\sigma^2}\right),
+\]</span></p>
+<p>so <span class="math inline">\(\mu\mid y\sim\mathcal N(\mu_n,\tau_n^2)\)</span>. This makes an excellent correctness check for the MCMC code.</p>
+<div id="cell-fig-bayesian-posterior" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>data_rng <span class="op">=</span> np.random.default_rng(<span class="dv">2026</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> data_rng.normal(loc<span class="op">=</span><span class="fl">1.8</span>, scale<span class="op">=</span><span class="fl">1.2</span>, size<span class="op">=</span><span class="dv">25</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>sigma, mu0, tau0 <span class="op">=</span> <span class="fl">1.2</span>, <span class="fl">0.0</span>, <span class="fl">3.0</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> log_posterior_mu(mu):</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    log_likelihood <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> np.<span class="bu">sum</span>(((y <span class="op">-</span> mu) <span class="op">/</span> sigma)<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    log_prior <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> ((mu <span class="op">-</span> mu0) <span class="op">/</span> tau0)<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">float</span>(log_likelihood <span class="op">+</span> log_prior)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>posterior_var <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> (<span class="dv">1</span> <span class="op">/</span> tau0<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> <span class="bu">len</span>(y) <span class="op">/</span> sigma<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>posterior_mean <span class="op">=</span> posterior_var <span class="op">*</span> (mu0 <span class="op">/</span> tau0<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> y.<span class="bu">sum</span>() <span class="op">/</span> sigma<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>posterior_sd <span class="op">=</span> np.sqrt(posterior_var)</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>posterior_chain, posterior_accept <span class="op">=</span> metropolis_hastings(</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    log_posterior_mu, initial<span class="op">=-</span><span class="fl">5.0</span>, n_steps<span class="op">=</span><span class="dv">15000</span>,</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    proposal_scale<span class="op">=</span><span class="fl">0.5</span>, rng<span class="op">=</span>np.random.default_rng(<span class="dv">456</span>))</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>posterior_draws <span class="op">=</span> posterior_chain[<span class="dv">2000</span>:]</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>mu_grid <span class="op">=</span> np.linspace(posterior_mean <span class="op">-</span> <span class="dv">4</span> <span class="op">*</span> posterior_sd,</span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>                      posterior_mean <span class="op">+</span> <span class="dv">4</span> <span class="op">*</span> posterior_sd, <span class="dv">400</span>)</span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>exact_pdf <span class="op">=</span> np.exp(<span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> ((mu_grid <span class="op">-</span> posterior_mean) <span class="op">/</span> posterior_sd)<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>exact_pdf <span class="op">/=</span> posterior_sd <span class="op">*</span> np.sqrt(<span class="dv">2</span> <span class="op">*</span> np.pi)</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">4</span>))</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>ax.hist(posterior_draws, bins<span class="op">=</span><span class="dv">55</span>, density<span class="op">=</span><span class="va">True</span>, alpha<span class="op">=</span><span class="fl">0.55</span>, label<span class="op">=</span><span class="st">"MH"</span>)</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>ax.plot(mu_grid, exact_pdf, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">"Exact posterior"</span>)</span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>ax.<span class="bu">set</span>(xlabel<span class="op">=</span><span class="st">"Unknown mean μ"</span>, ylabel<span class="op">=</span><span class="st">"Posterior density"</span>, title<span class="op">=</span><span class="st">"Bayesian normal-mean posterior"</span>)</span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>ax.legend()</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Exact posterior mean: </span><span class="sc">{</span>posterior_mean<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"MCMC estimated mean: </span><span class="sc">{</span>posterior_draws<span class="sc">.</span>mean()<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Exact posterior SD:   </span><span class="sc">{</span>posterior_sd<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"MCMC estimated SD:   </span><span class="sc">{</span>posterior_draws<span class="sc">.</span>std(ddof<span class="op">=</span><span class="dv">1</span>)<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Acceptance fraction: </span><span class="sc">{</span>posterior_accept<span class="sc">.</span>mean()<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-bayesian-posterior" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-bayesian-posterior-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-bayesian-posterior-output-1.png" width="681" height="376" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bayesian-posterior-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Metropolis–Hastings posterior draws compared with the exact normal posterior.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Exact posterior mean: 1.7172
+MCMC estimated mean: 1.7214
+Exact posterior SD:   0.2392
+MCMC estimated SD:   0.2420
+Acceptance fraction: 0.483</code></pre>
+</div>
+</div>
+<p>Our example is intentionally simple enough to admit an exact posterior. In more complicated Bayesian models, normalizing constants and posterior moments may be unknown, so multiple-chain diagnostics, sensitivity checks, and prior predictive or posterior predictive reasoning become especially important.</p>
+</section>
+<section id="common-mistakes-and-their-consequences" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="common-mistakes-and-their-consequences"><span class="header-section-number">11</span> Common mistakes and their consequences</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Mistake</th>
+<th>Why it matters</th>
+<th>Better approach</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Discarding rejected states</td>
+<td>Overweights accepted locations; no longer represents the MH chain</td>
+<td>Store the current state at <strong>every</strong> iteration</td>
+</tr>
+<tr class="even">
+<td>Using a density ratio directly</td>
+<td>Underflow/overflow for extreme log likelihoods</td>
+<td>Compare <strong>log</strong> acceptance ratios</td>
+</tr>
+<tr class="odd">
+<td>Cancelling an asymmetric proposal</td>
+<td>Violates the intended detailed-balance construction</td>
+<td>Include both forward and reverse proposal densities</td>
+</tr>
+<tr class="even">
+<td>Choosing scale from acceptance alone</td>
+<td>High acceptance can accompany tiny exploration steps</td>
+<td>Inspect mixing, autocorrelation, ESS, and estimates</td>
+</tr>
+<tr class="odd">
+<td>Treating burn-in as a cure-all</td>
+<td>Stationary-looking segments can be trapped in one mode</td>
+<td>Run dispersed chains and investigate transitions</td>
+</tr>
+<tr class="even">
+<td>Treating all draws as independent</td>
+<td>Understates uncertainty</td>
+<td>Use MCSE/ESS appropriate to the estimand</td>
+</tr>
+<tr class="odd">
+<td>Assuming a good histogram proves convergence</td>
+<td>A histogram can hide time ordering and rare transitions</td>
+<td>Inspect traces and cross-chain agreement</td>
+</tr>
+</tbody>
+</table>
+<p>A subtle point: samples from a stationary MH chain are <strong>not automatically independent</strong>. Moreover, the naive sample standard deviation of the chain states measures posterior spread, not the Monte Carlo uncertainty of an estimated posterior mean. For the latter, accounting for temporal dependence is essential.</p>
+</section>
+<section id="where-this-leads-next" class="level2" data-number="12">
+<h2 data-number="12" class="anchored" data-anchor-id="where-this-leads-next"><span class="header-section-number">12</span> Where this leads next</h2>
+<p>Metropolis–Hastings is a general framework: it only requires a tractable target-density ratio and a proposal mechanism. Its main practical challenge is choosing proposals that explore efficiently.</p>
+<ul>
+<li><strong>Gibbs sampling</strong> draws from full conditional distributions. It can be viewed as a special MH update with acceptance probability one when the full conditional is sampled exactly.</li>
+<li><strong>Hamiltonian Monte Carlo (HMC)</strong> uses gradients and simulated Hamiltonian dynamics to propose distant, structured moves. It can work much better than a naive random walk for smooth, high-dimensional posteriors.</li>
+<li><strong>Modern adaptive samplers</strong> tune important algorithm parameters during warm-up, while maintaining the conditions necessary for correct inference.</li>
+</ul>
+<p>None is universally superior. Gibbs can also mix poorly across correlated variables or separated modes; HMC requires gradients and must contend with challenging geometry and disconnected modes.</p>
+</section>
+<section id="exercises" class="level2" data-number="13">
+<h2 data-number="13" class="anchored" data-anchor-id="exercises"><span class="header-section-number">13</span> Exercises</h2>
+<ol type="1">
+<li><strong>Detailed balance.</strong> Starting with <span class="math inline">\(\alpha(x,x')=\min\{1,r(x,x')\}\)</span>, separately verify detailed balance in the two cases <span class="math inline">\(r\le1\)</span> and <span class="math inline">\(r&gt;1\)</span>.</li>
+<li><strong>Proposal tuning.</strong> For <span class="math inline">\(s\in\{0.1,0.5,1.5,4,10\}\)</span>, report acceptance rate and estimated ESS for the sample mean. Why does the largest acceptance rate not necessarily win?</li>
+<li><strong>Mode occupancy.</strong> For the mixture centered at <span class="math inline">\(\pm2\)</span>, estimate <span class="math inline">\(\Pr(X&gt;0)\)</span> with several chains; compare against the exact value <span class="math inline">\(1/2\)</span>. Repeat for modes centered at <span class="math inline">\(\pm8\)</span>.</li>
+<li><strong>Asymmetric proposal.</strong> Replace the random walk with <span class="math inline">\(q(x'\mid x)=\mathcal N(x+\delta,s^2)\)</span>. Derive and implement <code>log_proposal(to_x, from_x)</code>, then compare results with and without the Hastings correction.</li>
+<li><strong>Bayesian inference.</strong> Change <span class="math inline">\(n\)</span>, <span class="math inline">\(\sigma\)</span>, and the prior scale <span class="math inline">\(\tau_0\)</span>. Predict how the posterior uncertainty changes, then compare the exact and MCMC estimates.</li>
+<li><strong>Uncertainty of an estimate.</strong> Compare the naive independent-sample standard error of the posterior mean with an autocorrelation-adjusted estimate. Explain which assumptions each requires.</li>
+</ol>
+</section>
+<section id="key-takeaways" class="level2" data-number="14">
+<h2 data-number="14" class="anchored" data-anchor-id="key-takeaways"><span class="header-section-number">14</span> Key takeaways</h2>
+<p>Metropolis–Hastings turns <strong>pointwise evaluation</strong> of an unnormalized density into a mechanism for <strong>sampling from its normalized distribution</strong>, without computing the normalizer. The acceptance probability is not an arbitrary rule: it is a constructive way to enforce detailed balance. But <strong>correct stationary distribution</strong>, <strong>fast mixing</strong>, and <strong>trustworthy finite-sample estimates</strong> are three distinct issues. The last two demand diagnostics and careful computational practice.</p>
+</section>
+<section id="references-and-further-reading" class="level2" data-number="15">
+<h2 data-number="15" class="anchored" data-anchor-id="references-and-further-reading"><span class="header-section-number">15</span> References and further reading</h2>
+<ol type="1">
+<li>Metropolis, N., Rosenbluth, A. W., Rosenbluth, M. N., Teller, A. H., &amp; Teller, E. (1953). <em>Equation of State Calculations by Fast Computing Machines</em>. Journal of Chemical Physics, 21, 1087–1092. https://doi.org/10.1063/1.1699114</li>
+<li>Hastings, W. K. (1970). <em>Monte Carlo Sampling Methods Using Markov Chains and Their Applications</em>. Biometrika, 57(1), 97–109. https://doi.org/10.1093/biomet/57.1.97</li>
+<li>Roberts, G. O., Gelman, A., &amp; Gilks, W. R. (1997). <em>Weak Convergence and Optimal Scaling of Random Walk Metropolis Algorithms</em>. Annals of Applied Probability, 7(1), 110–120. https://doi.org/10.1214/aoap/1034625254</li>
+<li>Vehtari, A., Gelman, A., Simpson, D., Carpenter, B., &amp; Bürkner, P.-C. (2021). <em>Rank-Normalization, Folding, and Localization: An Improved <span class="math inline">\(\widehat R\)</span> for Assessing Convergence of MCMC</em>. Bayesian Analysis, 16(2), 667–718. https://doi.org/10.1214/20-BA1221</li>
+<li>Betancourt, M. (2017). <em>A Conceptual Introduction to Hamiltonian Monte Carlo</em>. https://arxiv.org/abs/1701.02434</li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/anantkumar\.online");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "kaymant/blogs";
+    script.dataset.repoId = "R_kgDORBjjTg";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDORBjjTs4C2ifr";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "top";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../posts/matrix-multiplication-benchmarking/index.html" class="pagination-link" aria-label="From Scratch: Optimizing Matrix Multiplication in C">
+        <span class="nav-page-text">From Scratch: Optimizing Matrix Multiplication in C</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2026, Anant</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="../../index.html">
+<p>All posts</p>
+</a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

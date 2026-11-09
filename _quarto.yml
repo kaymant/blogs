@@ -5,6 +5,7 @@ project:
     - CNAME
     - "simulations/"
     - "etc/"
+    - "favicon/"
 
 website:
   title: "Anant's Blog" 

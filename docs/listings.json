@@ -7,7 +7,7 @@
     "listing": "/index.html",
     "items": [
       "/posts/edge-detection-computer-vision/index.html",
-      "/posts/markov-chain/mcmc.html",
+      "/posts/markov-chain/index.html",
       "/posts/importance-sampling/index.html",
       "/posts/generating-other-dist/index.html",
       "/posts/pseudorandom-num-generators/index.html",
