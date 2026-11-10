@@ -1,0 +1,50 @@
+---
+title: "Privacy Policy"
+description: "Privacy and cookie information for Anant's Blog."
+date: "2026-11-10"
+format:
+  html:
+    toc: true
+comments: false
+---
+
+**Last updated:** November 10, 2026
+
+This Privacy Policy explains how [Anant's Blog](https://anantkumar.online) handles information when you visit the website. The site publishes educational and technical articles about mathematics, physics, programming, machine learning and related subjects.
+
+## Information you provide
+
+You can read the public articles without registering for a site account. If you choose to use third-party interactive features (such as embedded comments, where available), information you submit may be processed by those providers under their own policies. Avoid posting personal or sensitive information publicly.
+
+## Website hosting and technical data
+
+The website is hosted using GitHub Pages. Hosting and infrastructure providers may process technical information, including IP addresses, user-agent information, request timestamps, and error information, as needed to serve, secure, and maintain the website. Their handling of data is governed by their applicable policies.
+
+## Advertising and cookies
+
+This website uses or intends to use Google AdSense to serve advertisements. Google and other third-party advertising vendors may use cookies or similar technologies to display and measure advertisements.
+
+- Third-party vendors, including Google, may use cookies to serve ads based on a visitor's prior visits to this website or other websites.
+- Google's advertising cookies allow Google and its partners to serve ads based on visits to this site and other sites on the Internet.
+- Visitors can manage personalized advertising through [Google Ads Settings](https://adssettings.google.com/) and may opt out of some third-party vendors' uses of cookies through [aboutads.info](https://www.aboutads.info/choices/).
+- Further information about Google's use of information from partner sites is available at [How Google uses information from sites or apps that use its services](https://policies.google.com/technologies/partner-sites).
+
+If additional advertising vendors are enabled, this policy will be updated to identify them or explain how to access the relevant vendor information and opt-out choices.
+
+## Comments and external services
+
+Some pages may include third-party components, such as Giscus comments, which may request that you sign in to a third-party account to participate. Such components are governed by their providers' privacy policies. This section will be updated if the commenting system changes.
+
+Articles may link to third-party websites. Those websites have their own privacy practices, for which this site is not responsible.
+
+## Your choices and consent
+
+You can control or delete cookies through your browser settings. Where consent for advertising technologies is required by applicable law, the site will provide the required choices before deploying those technologies. Consent mechanisms, if needed, are separate from this policy.
+
+## Contact
+
+For privacy-related questions, please use the contact method provided on the [About page](https://anantkumar.online/about.html). 
+
+## Updates to this policy
+
+This policy may be revised when the website's features, advertising services, or legal requirements change. The latest revision date will appear at the top of this page.

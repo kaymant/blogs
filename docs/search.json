@@ -384,11 +384,60 @@
     ]
   },
   {
-    "objectID": "resources.html",
-    "href": "resources.html",
-    "title": "Resources & Interactive Tools",
+    "objectID": "privacy.html",
+    "href": "privacy.html",
+    "title": "Privacy Policy",
     "section": "",
-    "text": "Welcome to the resources page. Here you will find interactive simulations, visual tools, and materials I use for teaching Physics and Mathematics.\n\n\n    \n      \n      \n    \n\n\n\n\n\n\n\n\n\n\nElectric Field Lines Visualization\n\n\n\nPhysics\n\nSimulations\n\n\n\nAn interactive 3D simulation to explore the electric field lines due to point charges.\n\n\n\n\n\n\n\n\n\n\n\n\nVisualizing A 2D Linear Transformation\n\n\n\nMathematics\n\nSimulations\n\n\n\nAn interactive web application to visualize how a Linear Transformation changes the 2D space.\n\n\n\n\n\n\n\n\n\n\n\n\nOptics Lab\n\n\n\nPhysics\n\nSimulations\n\n\n\nAn interactive web application to explore the accurate Physics of interaction of white light with Prisms and other glass shapes.\n\n\n\n\n\nNo matching items"
+    "text": "Last updated: November 10, 2026\nThis Privacy Policy explains how Anant’s Blog handles information when you visit the website. The site publishes educational and technical articles about mathematics, physics, programming, machine learning and related subjects."
+  },
+  {
+    "objectID": "privacy.html#information-you-provide",
+    "href": "privacy.html#information-you-provide",
+    "title": "Privacy Policy",
+    "section": "Information you provide",
+    "text": "Information you provide\nYou can read the public articles without registering for a site account. If you choose to use third-party interactive features (such as embedded comments, where available), information you submit may be processed by those providers under their own policies. Avoid posting personal or sensitive information publicly."
+  },
+  {
+    "objectID": "privacy.html#website-hosting-and-technical-data",
+    "href": "privacy.html#website-hosting-and-technical-data",
+    "title": "Privacy Policy",
+    "section": "Website hosting and technical data",
+    "text": "Website hosting and technical data\nThe website is hosted using GitHub Pages. Hosting and infrastructure providers may process technical information, including IP addresses, user-agent information, request timestamps, and error information, as needed to serve, secure, and maintain the website. Their handling of data is governed by their applicable policies."
+  },
+  {
+    "objectID": "privacy.html#advertising-and-cookies",
+    "href": "privacy.html#advertising-and-cookies",
+    "title": "Privacy Policy",
+    "section": "Advertising and cookies",
+    "text": "Advertising and cookies\nThis website uses or intends to use Google AdSense to serve advertisements. Google and other third-party advertising vendors may use cookies or similar technologies to display and measure advertisements.\n\nThird-party vendors, including Google, may use cookies to serve ads based on a visitor’s prior visits to this website or other websites.\nGoogle’s advertising cookies allow Google and its partners to serve ads based on visits to this site and other sites on the Internet.\nVisitors can manage personalized advertising through Google Ads Settings and may opt out of some third-party vendors’ uses of cookies through aboutads.info.\nFurther information about Google’s use of information from partner sites is available at How Google uses information from sites or apps that use its services.\n\nIf additional advertising vendors are enabled, this policy will be updated to identify them or explain how to access the relevant vendor information and opt-out choices."
+  },
+  {
+    "objectID": "privacy.html#comments-and-external-services",
+    "href": "privacy.html#comments-and-external-services",
+    "title": "Privacy Policy",
+    "section": "Comments and external services",
+    "text": "Comments and external services\nSome pages may include third-party components, such as Giscus comments, which may request that you sign in to a third-party account to participate. Such components are governed by their providers’ privacy policies. This section will be updated if the commenting system changes.\nArticles may link to third-party websites. Those websites have their own privacy practices, for which this site is not responsible."
+  },
+  {
+    "objectID": "privacy.html#your-choices-and-consent",
+    "href": "privacy.html#your-choices-and-consent",
+    "title": "Privacy Policy",
+    "section": "Your choices and consent",
+    "text": "Your choices and consent\nYou can control or delete cookies through your browser settings. Where consent for advertising technologies is required by applicable law, the site will provide the required choices before deploying those technologies. Consent mechanisms, if needed, are separate from this policy."
+  },
+  {
+    "objectID": "privacy.html#contact",
+    "href": "privacy.html#contact",
+    "title": "Privacy Policy",
+    "section": "Contact",
+    "text": "Contact\nFor privacy-related questions, please use the contact method provided on the About page."
+  },
+  {
+    "objectID": "privacy.html#updates-to-this-policy",
+    "href": "privacy.html#updates-to-this-policy",
+    "title": "Privacy Policy",
+    "section": "Updates to this policy",
+    "text": "Updates to this policy\nThis policy may be revised when the website’s features, advertising services, or legal requirements change. The latest revision date will appear at the top of this page."
   },
   {
     "objectID": "index.html",
@@ -396,6 +445,13 @@
     "title": "blogs",
     "section": "",
     "text": "Edge Detection for Computer Vision\n\n\nFrom Image Gradients to Sobel, Laplacian, and Canny\n\n\n\nComputer Vision\n\nImage Processing\n\nMathematics\n\nPython\n\n\n\nUnderstanding edge detection from first principles: derivatives, convolution, gradient operators, noise, Gaussian smoothing and the Canny algorithm.\n\n\n\n\n\nOct 20, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nMCMC from Scratch: The Metropolis–Hastings Algorithm\n\n\nWhy it works, when it fails, and how to diagnose a Markov chain\n\n\n\nData Science\n\nProbability\n\nStatistical Computing\n\nPython\n\nMathematics\n\nBayesian Inference\n\n\n\nAn executable, mathematically grounded introduction to Metropolis–Hastings, with detailed balance, log-domain implementation, convergence diagnostics, proposal tuning, and Bayesian inference.\n\n\n\n\n\nMay 29, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nVariance Reduction: A Guide to Importance Sampling and Beyond\n\n\n\n\n\n\nData Science\n\nProbability\n\nStatistical Computing\n\nPython\n\nMathematics\n\n\n\n\n\n\n\n\n\nMay 22, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nGenerating Other Distributions from Uniform Random Variables\n\n\n\n\n\n\nUniform Distribution\n\nPseudorandomness\n\nLCGs\n\nStatistical Computing\n\nPython\n\nR\n\n\n\nIn this post, we explore how to generate random variables from various distributions using uniform random variables. We will cover techniques such as the Inverse Transform Method, Box-Muller Transform, and Acceptance-Rejection Method, along with their applications and implementations in Python and R\n\n\n\n\n\nFeb 21, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nPseudorandom Number Generators: Linear Congruential Generators\n\n\n\n\n\n\nRandomness\n\nPseudorandomness\n\nLCGs\n\nStatistical Computing\n\n\n\nA discussion on Randomness, Pseudorandomness, and Linear Congruential Generators (LCGs).\n\n\n\n\n\nFeb 20, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nIntegrating R with LaTeX using knitr\n\n\n\n\n\n\nR\n\nLaTeX\n\nStatistics\n\nData Science\n\n\n\nA comprehensive guide to integrating R code and LaTeX documents using the knitr package, enabling dynamic report generation and reproducible research.\n\n\n\n\n\nFeb 19, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nBreaking a Stick Randomly to form a Triangle: A Monte Carlo Visualisation\n\n\n\n\n\n\nMathematics\n\nProbability\n\nPython\n\n\n\n\n\n\n\n\n\nFeb 11, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nFrom Scratch: Optimizing Matrix Multiplication in C\n\n\n\n\n\n\nC\n\nHPC\n\nLinear Algebra\n\nOptimization\n\n\n\nOptimizing Matrix Multiplication from naive loops to Tiled OpenMP.\n\n\n\n\n\nJan 26, 2026\n\n\nAnant Kumar\n\n\n\n\n\n\n\n\n\n\n\n\nVisualizing Functions with Contour Plots\n\n\n\n\n\n\nMathematics\n\nPython\n\nVisualization\n\n\n\nA guide to visualizing 2D functions as 3D surfaces and contour maps using Python and Matplotlib.\n\n\n\n\n\nJan 26, 2026\n\n\nAnant Kumar\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "resources.html",
+    "href": "resources.html",
+    "title": "Resources & Interactive Tools",
+    "section": "",
+    "text": "Welcome to the resources page. Here you will find interactive simulations, visual tools, and materials I use for teaching Physics and Mathematics.\n\n\n    \n      \n      \n    \n\n\n\n\n\n\n\n\n\n\nElectric Field Lines Visualization\n\n\n\nPhysics\n\nSimulations\n\n\n\nAn interactive 3D simulation to explore the electric field lines due to point charges.\n\n\n\n\n\n\n\n\n\n\n\n\nVisualizing A 2D Linear Transformation\n\n\n\nMathematics\n\nSimulations\n\n\n\nAn interactive web application to visualize how a Linear Transformation changes the 2D space.\n\n\n\n\n\n\n\n\n\n\n\n\nOptics Lab\n\n\n\nPhysics\n\nSimulations\n\n\n\nAn interactive web application to explore the accurate Physics of interaction of white light with Prisms and other glass shapes.\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "posts/markov-chain/index.html",

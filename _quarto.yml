@@ -6,6 +6,7 @@ project:
     - "simulations/"
     - "etc/"
     - "favicon/"
+    - ads.txt
 
 website:
   title: "Anant's Blog" 
@@ -39,6 +40,8 @@ website:
     right:
       - text: "All posts"
         href: index.qmd
+      - text: "Privacy Policy"
+        href: privacy.qmd
  
   comments:
     giscus:
