@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Team 16 — AI-Assisted Learning and Student Understanding</title>
+<style>
+  :root{
+    --navy:#1D3557;
+    --blue:#457B9D;
+    --sky:#A8DADC;
+    --red:#E63946;
+    --mint:#F1FAEE;
+    --paper:#FFFFFF;
+    --ink:#24364B;
+    --muted:#60758A;
+    --line:#DCE6EE;
+    --soft:#F7FAFC;
+    --yellow:#FFF4C7;
+    --green:#EAF7EE;
+    --pink:#FCE9EC;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#dfe7ee;font-family:Arial,Helvetica,sans-serif;color:var(--navy)}
+  body{display:flex;align-items:center;justify-content:center}
+  .deck{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  .slide{
+    display:none; width:min(96vw,1280px); aspect-ratio:16/9; max-height:94vh;
+    background:var(--paper); border-radius:12px; box-shadow:0 14px 40px rgba(29,53,87,.18);
+    position:relative; overflow:hidden; padding:54px 64px 46px;
+  }
+  .slide.active{display:flex;flex-direction:column}
+  .slide::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.55;
+    background-image:radial-gradient(circle at 1px 1px, rgba(69,123,157,.09) 1px, transparent 0);
+    background-size:24px 24px;
+  }
+  .slide>*{position:relative;z-index:1}
+  h1,h2,h3,p{margin-top:0}
+  h1{font-size:66px;line-height:1.07;margin-bottom:20px;letter-spacing:-1.8px}
+  h2{font-size:38px;line-height:1.15;color:var(--blue);margin:0 0 28px}
+  h3{font-size:24px;line-height:1.25;margin-bottom:10px}
+  p,li{font-size:20px;line-height:1.45}
+  .subtitle{font-size:26px;color:var(--muted);line-height:1.4}
+  .eyebrow{font-size:15px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--red);margin-bottom:16px}
+  .footer{position:absolute;left:64px;right:64px;bottom:18px;display:flex;align-items:center;justify-content:space-between;color:#7890A6;font-size:13px}
+  .footer .brand{font-weight:700;color:var(--blue)}
+  .progress{height:4px;background:#edf3f7;position:absolute;left:0;right:0;bottom:0}
+  .progress span{display:block;height:100%;background:var(--blue);width:0}
+  .title-slide{justify-content:center;text-align:center}
+  .title-slide h1{font-size:72px;color:var(--navy);max-width:1040px;margin-left:auto;margin-right:auto}
+  .title-slide .subtitle{max-width:900px;margin:0 auto 30px}
+  .presenter{font-size:18px;color:var(--blue);font-weight:700}
+  .accent-line{width:100px;height:5px;border-radius:5px;background:var(--red);margin:24px auto}
+  .content{flex:1;display:flex;align-items:center;width:100%}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:34px;width:100%;align-items:stretch}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;width:100%}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;width:100%}
+  .card{background:rgba(247,250,252,.96);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 4px 14px rgba(29,53,87,.05)}
+  .card h3{color:var(--blue)}
+  .card p,.card li{font-size:17px}
+  .card .kicker{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:8px}
+  .big-idea{font-size:42px;line-height:1.2;font-weight:700;color:var(--navy);max-width:1020px}
+  .big-idea .highlight{color:var(--red)}
+  .tension{display:flex;align-items:center;gap:18px;margin-top:24px}
+  .pill{padding:14px 18px;border-radius:999px;background:#EEF5F8;border:1px solid #D6E5EC;font-size:18px;font-weight:700;color:var(--navy)}
+  .vs{font-size:20px;font-weight:700;color:var(--red)}
+  .quote{background:var(--soft);border-left:6px solid var(--sky);padding:18px 20px;border-radius:8px;font-size:19px;font-style:italic;line-height:1.45;color:var(--navy)}
+  .quote small{display:block;margin-top:10px;font-style:normal;color:var(--blue);font-weight:700}
+  .person{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+  .avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:22px;background:var(--sky);color:var(--navy);flex:0 0 auto}
+  .person strong{font-size:22px}
+  .person span{display:block;color:var(--muted);font-size:15px;margin-top:3px}
+  .theme-card{border-top:6px solid var(--blue)}
+  .theme-card:nth-child(2){border-top-color:#65A17B}
+  .theme-card:nth-child(3){border-top-color:#D9A441}
+  .theme-card:nth-child(4){border-top-color:#B56E87}
+  .theme-card:nth-child(5){border-top-color:#6D79B8}
+  .number{width:42px;height:42px;border-radius:50%;background:var(--blue);color:white;display:grid;place-items:center;font-size:20px;font-weight:800;margin-bottom:12px}
+  .root-flow{display:grid;grid-template-columns:1.05fr 44px 1.15fr;gap:12px;align-items:center;margin-bottom:14px}
+  .root-flow .symptom,.root-flow .root{border-radius:12px;padding:14px 16px;font-size:16px;line-height:1.35}
+  .root-flow .symptom{background:#F4F8FB;border:1px solid #D8E6EE}
+  .root-flow .root{background:#FFF7E2;border:1px solid #EBD7A2;font-weight:700}
+  .arrow{font-size:26px;color:var(--blue);text-align:center}
+  .conflict{background:white;border:1px solid var(--line);border-radius:14px;padding:18px}
+  .conflict .two{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:12px 0}
+  .conflict .side{padding:12px;border-radius:10px;background:#F6FAFC;text-align:center;font-weight:700;font-size:16px}
+  .conflict .result{font-size:14px;color:var(--muted);text-align:center;border-top:1px solid var(--line);padding-top:10px}
+  .hmw{background:white;border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;gap:14px;align-items:flex-start}
+  .hmw .icon{width:42px;height:42px;border-radius:10px;background:var(--sky);display:grid;place-items:center;font-size:22px;flex:0 0 auto}
+  .hmw p{font-size:17px;margin:0;line-height:1.4}
+  .hmw strong{color:var(--navy)}
+  .timeline{display:flex;align-items:stretch;gap:0;width:100%;position:relative}
+  .step{flex:1;text-align:center;position:relative;padding:0 10px}
+  .step:not(:last-child)::after{content:"";position:absolute;top:28px;right:-2px;width:20px;height:3px;background:#BFD4DF}
+  .step .circle{width:58px;height:58px;border-radius:50%;background:var(--blue);color:white;margin:0 auto 14px;display:grid;place-items:center;font-size:24px;font-weight:800}
+  .step h3{font-size:18px;color:var(--navy)}
+  .step p{font-size:14px;color:var(--muted);line-height:1.35}
+  .prototype{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+  .prototype .tag{font-size:14px;font-weight:700;color:var(--blue);background:#EDF6FA;padding:6px 10px;border-radius:999px;white-space:nowrap}
+  .prototype p{font-size:17px;margin:0}
+  .metric{padding:20px;border-radius:14px;background:#F8FBFC;border:1px solid var(--line);text-align:center}
+  .metric .big{font-size:34px;font-weight:800;color:var(--blue);margin-bottom:8px}
+  .metric p{font-size:15px;color:var(--muted);margin:0}
+  .ask{font-size:28px;line-height:1.35;font-weight:700;color:var(--navy)}
+  .ask-list{list-style:none;padding:0;margin:18px 0 0}
+  .ask-list li{position:relative;padding-left:34px;margin:14px 0;font-size:18px}
+  .ask-list li::before{content:"?";position:absolute;left:0;top:0;width:23px;height:23px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:800}
+  .notes-panel{display:none;position:absolute;z-index:20;right:18px;bottom:34px;width:430px;max-height:55%;overflow:auto;background:rgba(29,53,87,.97);color:white;border-radius:12px;padding:18px 20px;box-shadow:0 8px 26px rgba(0,0,0,.25)}
+  .notes-panel.show{display:block}
+  .notes-panel h4{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:1px;color:#A8DADC}
+  .notes-panel p{font-size:14px;line-height:1.45;margin:0 0 10px;color:white}
+  .controls{position:fixed;bottom:18px;right:24px;display:flex;gap:8px;z-index:50}
+  .controls button{border:0;border-radius:9px;background:rgba(29,53,87,.9);color:white;width:40px;height:40px;font-size:20px;cursor:pointer}
+  .counter{position:fixed;bottom:20px;left:24px;background:rgba(255,255,255,.9);border:1px solid #d7e2ea;color:var(--navy);padding:7px 11px;border-radius:9px;font-size:13px;z-index:50}
+  .source-note{font-size:12px;color:#8195A8;margin-top:8px}
+
+
+  /* ===== Responsive presentation behaviour ===== */
+  /* Desktop / tablet / landscape: keep the designed 16:9 canvas and scale it to fit. */
+  .deck{
+    width:1280px;
+    height:720px;
+    flex:0 0 auto;
+    transform-origin:center center;
+    will-change:transform;
+  }
+  .slide{
+    width:1280px;
+    height:720px;
+    max-height:none;
+    aspect-ratio:auto;
+    flex:0 0 auto;
+  }
+
+  /* Small portrait screens: switch to a readable, one-slide-at-a-time mobile layout. */
+  @media (max-width:700px) and (orientation:portrait){
+    html,body{
+      width:100%;
+      min-height:100%;
+      height:auto;
+      overflow:hidden;
+      background:#eef3f7;
+    }
+    body{
+      display:block;
+    }
+    .deck{
+      width:100%;
+      height:100dvh;
+      transform:none !important;
+      display:block;
+    }
+    .slide{
+      width:100%;
+      height:100dvh;
+      min-height:100dvh;
+      max-height:none;
+      border-radius:0;
+      box-shadow:none;
+      padding:28px 22px 84px;
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+    }
+    .slide.active{display:flex}
+    .slide::before{background-size:20px 20px}
+    h1{font-size:clamp(38px,10.5vw,52px);line-height:1.08;letter-spacing:-1px}
+    .title-slide h1{font-size:clamp(42px,11vw,56px)}
+    h2{font-size:clamp(28px,7.6vw,38px);margin-bottom:20px}
+    h3{font-size:22px}
+    p,li{font-size:17px;line-height:1.48}
+    .subtitle{font-size:20px}
+    .eyebrow{font-size:12px;letter-spacing:1.2px;margin-bottom:12px}
+    .presenter{font-size:15px}
+    .content{display:block;flex:0 0 auto;width:100%}
+    .grid2,.grid3,.grid4,
+    .grid3[style],.grid4[style]{grid-template-columns:1fr !important;gap:14px !important}
+    .card{padding:18px}
+    .card p,.card li{font-size:16px}
+    .big-idea{font-size:30px}
+    .tension{flex-wrap:wrap;gap:10px}
+    .pill{font-size:15px;padding:10px 14px}
+    .quote{font-size:17px;padding:14px 16px}
+    .person strong{font-size:20px}
+    .avatar{width:48px;height:48px;font-size:19px}
+    .root-flow{grid-template-columns:1fr;gap:8px;margin-bottom:16px}
+    .root-flow .symptom,.root-flow .root{font-size:15px;padding:12px 14px}
+    .root-flow .arrow{transform:rotate(90deg);font-size:22px;line-height:1}
+    .conflict{padding:15px}
+    .conflict .two{grid-template-columns:1fr;gap:8px}
+    .conflict .vs{transform:rotate(90deg);text-align:center}
+    .hmw{padding:15px;gap:12px}
+    .hmw p{font-size:16px}
+    .timeline{flex-direction:column;gap:14px}
+    .step{display:grid;grid-template-columns:48px 1fr;column-gap:14px;text-align:left;padding:0;align-items:start}
+    .step:not(:last-child)::after{display:none}
+    .step .circle{width:48px;height:48px;margin:0;grid-row:1 / span 2;font-size:20px}
+    .step h3{font-size:18px;margin:1px 0 5px}
+    .step p{font-size:15px;margin:0}
+    .prototype{flex-direction:column;gap:8px}
+    .prototype p{font-size:16px}
+    .metric{padding:16px}
+    .metric .big{font-size:28px}
+    .metric p{font-size:15px}
+    .ask{font-size:24px}
+    .ask-list li{font-size:16px;padding-left:32px}
+    .footer{display:none}
+    .progress{position:fixed;z-index:45}
+    .notes-panel{
+      position:fixed;
+      left:12px;
+      right:12px;
+      bottom:66px;
+      width:auto;
+      max-height:48dvh;
+      border-radius:12px;
+    }
+    .controls{right:12px;bottom:12px;gap:6px}
+    .controls button{width:38px;height:38px;border-radius:10px}
+    .counter{left:12px;bottom:14px}
+    .source-note{font-size:11px}
+  }
+
+  @media (max-width:420px) and (orientation:portrait){
+    .slide{padding-left:18px;padding-right:18px}
+    .hmw .icon{width:38px;height:38px;font-size:19px}
+    .card{padding:16px}
+  }
+
+  /* Safe-area support for phones with notches / gesture bars. */
+  @supports (padding: max(0px)){
+    @media (max-width:700px) and (orientation:portrait){
+      .slide{
+        padding-top:max(28px, env(safe-area-inset-top));
+        padding-left:max(18px, env(safe-area-inset-left));
+        padding-right:max(18px, env(safe-area-inset-right));
+        padding-bottom:max(84px, calc(env(safe-area-inset-bottom) + 72px));
+      }
+      .controls{bottom:max(12px, env(safe-area-inset-bottom));right:max(12px, env(safe-area-inset-right))}
+      .counter{bottom:max(14px, calc(env(safe-area-inset-bottom) + 2px));left:max(12px, env(safe-area-inset-left))}
+    }
+  }
+
+  @media print{
+    html,body{overflow:visible;background:#fff}
+    .deck{display:block;width:auto;height:auto}
+    .slide{display:flex !important;width:13.333in;height:7.5in;max-height:none;aspect-ratio:auto;border-radius:0;box-shadow:none;page-break-after:always}
+    .controls,.counter,.notes-panel{display:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<section class="slide title-slide active" data-title="Title">
+  <div class="eyebrow">BSMS4002 · Design Thinking for Data-Driven App Development</div>
+  <h1>AI-Assisted Learning<br>and Student Understanding</h1>
+  <div class="accent-line"></div>
+  <p class="subtitle">12 student interviews across Team 16 → Empathize findings → Analyze-phase HMWs → Solve-phase plan</p>
+  <div class="presenter">Team 16 · RD1 presentation · Anant Kumar (22F3001517)</div>
+  <div class="notes-panel"><h4>~15 sec</h4><p>Introduce the project neutrally: we are not asking whether AI is good or bad. We are studying the gap between AI-assisted performance and what a student can later understand and do independently.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>RD1 · Empathize → Analyze</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Problem">
+  <div class="eyebrow">The problem we are investigating</div>
+  <h2>Completion is visible. Understanding is not.</h2>
+  <div class="content" style="flex-direction:column;align-items:flex-start;justify-content:center">
+    <div class="big-idea">Students can use generative AI to get explanations, code, calculations and finished academic work — but <span class="highlight">successful completion does not prove independent understanding.</span></div>
+    <div class="tension"><span class="pill">AI-supported performance</span><span class="vs">≠</span><span class="pill">independent mastery</span></div>
+    <p style="max-width:980px;margin-top:26px;color:var(--muted)">Our design challenge is not to reduce AI use. It is to understand when AI supports learning, when it quietly replaces reasoning, and how students can recognise the difference.</p>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>Frame the core tension. The interviews consistently showed that students value AI. So the project is not an anti-AI intervention. The issue is visibility: a task can be complete while the learner still cannot reproduce the reasoning, transfer it, retain it, or verify it.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Problem statement</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Empathize">
+  <div class="eyebrow">Empathize phase · Team 16 conducted 12 interviews</div>
+  <h2>Six detailed interview cases are highlighted in this deck</h2>
+  
+  <div class="content">
+    <div class="grid3">
+      <div class="card">
+        <div class="person"><div class="avatar">P</div><div><strong>Pragati</strong><span>3rd-year CSE · VIT Vellore</span></div></div>
+        <p>Uses ChatGPT, Gemini and Claude for explanations, coding and projects.</p>
+        <div class="quote">“Sometimes it looks very easy when AI explains it… but we realise we have only understood it at a surface level.”<small>Pragati</small></div>
+      </div>
+      <div class="card">
+        <div class="person"><div class="avatar" style="background:#FFF0B8">A</div><div><strong>Ashutosh</strong><span>CSE undergraduate · IIITDM Jabalpur</span></div></div>
+        <p>Often attempts first, then uses AI as a conceptual dialogue partner and for targeted doubts.</p>
+        <div class="quote">“Don’t ask the solution directly… ask about the specific part where you are stuck.”<small>Ashutosh</small></div>
+      </div>
+      <div class="card">
+        <div class="person"><div class="avatar" style="background:#DDF3E3">A</div><div><strong>Aritra</strong><span>2nd-year Civil Engineering · Jadavpur University</span></div></div>
+        <p>Uses AI for calculations, explanations, viva prep, summaries and active spoken-English practice.</p>
+        <div class="quote">“If it is a difficult task that requires the mind, I would advise someone to give their full effort first.”<small>Aritra</small></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>Start by clarifying the scope: Team 16 analysed 12 interviews in total. This deck shows six detailed cases for which the interview records are available here. Introduce my three cases briefly and emphasise that AI use changes with task, deadline, confidence and motivation.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Empathize · Interview set 1</span></div><div class="progress"><span></span></div>
+</section>
+
+
+<section class="slide" data-title="Sherya interview">
+  <div class="eyebrow">Empathize phase · Interview set 2 · Pawan Mishra</div>
+  <h2>Sherya Mishra — the deadline rescuer</h2>
+  <div class="content">
+    <div class="grid2">
+      <div class="card" style="border-top:6px solid #4FB3D8">
+        <div class="person"><div class="avatar" style="background:#D8F2FB">S</div><div><strong>Sherya Mishra</strong><span>1st-year B.Pharm · HBTU Kanpur</span></div></div>
+        <p><strong>Situation:</strong> an 8-page assignment on titration and EDTA was due the same day, on a topic she had not studied.</p>
+        <div class="quote">“I would like AI to explain things to us first, and then we should do it ourselves.”<small>Sherya</small></div>
+      </div>
+      <div class="card">
+        <h3>What her journey exposed</h3>
+        <ul>
+          <li>Deadline pressure made <strong>copy-paste the easiest path</strong>.</li>
+          <li>She had to repeatedly re-prompt before the explanation reached the right level.</li>
+          <li>Copying the generated text hid how much was actually understood.</li>
+          <li>After finishing, she rated her ability to solve a similar problem alone at only <strong>50%</strong>.</li>
+        </ul>
+        <p class="source-note">Source: Team 16 Canvas 1 interview conducted by Pawan Mishra.</p>
+      </div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>Sherya shows the sharpest deadline case. The AI succeeds at producing the artifact, but the student’s own confidence remains low. Her journey also shows a level-matching problem: the response became useful only after several attempts to simplify it.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Empathize · Sherya Mishra</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Prashant interview">
+  <div class="eyebrow">Empathize phase · Interview set 2 · Pawan Mishra</div>
+  <h2>Prashant Kumar — the careful verifier</h2>
+  <div class="content">
+    <div class="grid2">
+      <div class="card" style="border-top:6px solid #D9A441">
+        <div class="person"><div class="avatar" style="background:#FFF0B8">P</div><div><strong>Prashant Kumar</strong><span>Final-year BSc Mathematics · Lucknow University-affiliated college</span></div></div>
+        <p><strong>Pattern:</strong> asks AI to teach the concept, practises related questions, returns to the assignment, and then cross-checks the result.</p>
+        <div class="quote">“I would make AI a guide, not a shortcut.”<small>Prashant</small></div>
+      </div>
+      <div class="card">
+        <h3>What his journey exposed</h3>
+        <ul>
+          <li>He deliberately avoids pasting the whole question and prefers concept-first help.</li>
+          <li>He expects AI to make mistakes and checks notes, textbooks, slides and other sources.</li>
+          <li>Verification is <strong>distributed across many places</strong>, adding friction.</li>
+          <li>The learning-first routine depends heavily on the student’s own discipline.</li>
+        </ul>
+        <p class="source-note">Source: Team 16 Canvas 1 interview conducted by Pawan Mishra.</p>
+      </div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>Prashant is important because he is not a dependent user. He already uses AI in a disciplined way, yet the system still makes him do extra work: find practice, verify claims and connect answers to trusted course material himself.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Empathize · Prashant Kumar</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Abhay interview">
+  <div class="eyebrow">Empathize phase · Interview set 2 · Pawan Mishra</div>
+  <h2>Abhay Srivastva — the first-principles interrogator</h2>
+  <div class="content">
+    <div class="grid2">
+      <div class="card" style="border-top:6px solid #65A17B">
+        <div class="person"><div class="avatar" style="background:#DDF3E3">A</div><div><strong>Abhay Srivastva</strong><span>Diploma level · IIT Madras BS in Data Science</span></div></div>
+        <p><strong>Pattern:</strong> asks AI to start from zero, questions assumptions, cross-checks other sources and focuses on the reasoning behind the result.</p>
+        <div class="quote">“I focus on the process rather than only the final output.”<small>Abhay</small></div>
+      </div>
+      <div class="card">
+        <h3>What his journey exposed</h3>
+        <ul>
+          <li>Good learning required careful prompting such as “assume I know nothing”.</li>
+          <li>Depth, assumptions and derivations had to be requested explicitly.</li>
+          <li>Confidence on a similar problem was <strong>99% immediately</strong>, but only <strong>60–70% after 15 days</strong> without revision.</li>
+          <li>He wanted the same concept available in visual and audio forms.</li>
+        </ul>
+        <p class="source-note">Source: Team 16 Canvas 1 interview conducted by Pawan Mishra.</p>
+      </div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>Abhay gives us a retention signal. Even after deep engagement and high immediate confidence, confidence falls after time. He also shows that learning-first behaviour is not the default—it has to be unlocked by prompting skill.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Empathize · Abhay Srivastva</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="12-interview synthesis">
+  <div class="eyebrow">Empathize synthesis · 12 interviews across Team 16</div>
+  <h2>12 interviews overall — six detailed cases illustrated here</h2>
+  <div class="content">
+    <div class="grid3">
+      <div class="card theme-card">
+        <h3>When urgency dominates</h3>
+        <p><strong>Pragati + Sherya</strong> show how deadline pressure can turn AI from a learning aid into an artifact generator.</p>
+      </div>
+      <div class="card theme-card">
+        <h3>When learning is deliberate</h3>
+        <p><strong>Ashutosh + Prashant</strong> show that good AI use is possible—but requires self-discipline, targeted questions and verification.</p>
+      </div>
+      <div class="card theme-card">
+        <h3>When reasoning is deep</h3>
+        <p><strong>Aritra + Abhay</strong> show the value of effort-first learning, but also the risks of reduced patience and fading retention.</p>
+      </div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:18px">Across Team 16’s 12-interview Empathize phase, our design focus is the transition from AI-supported performance to durable, independent understanding. The six detailed cases shown here illustrate that transition from different angles.</div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>This slide is the bridge into Analyze. Team 16’s Empathize work covered 12 interviews in total. I am illustrating six of those cases here because those records are available in the attached canvases. The broader design question is still the same: when should students struggle, what should they trust, can they transfer the learning, and will it last?</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Empathize · cross-interview synthesis</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Evidence">
+  <div class="eyebrow">Behaviour patterns emerging from the 12-interview Empathize phase</div>
+  <h2>AI behaviour changes with the student’s goal and context</h2>
+  <div class="content">
+    <div class="grid2">
+      <div class="card" style="border-top:6px solid #65A17B">
+        <h3>Learning-oriented use</h3>
+        <ul>
+          <li>Attempts first, then asks about the exact point of confusion.</li>
+          <li>Requests “why?”, derivations, shorter explanations and similar problems.</li>
+          <li>Checks steps against prior reasoning or course material.</li>
+          <li>Uses AI to create practice, quizzes or active speaking situations.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:6px solid var(--red)">
+        <h3>Completion-oriented use</h3>
+        <ul>
+          <li>Deadline pressure makes finishing the artifact the immediate goal.</li>
+          <li>Full code, reports or answers may be generated before understanding catches up.</li>
+          <li>The apparent ease of an explanation can be mistaken for mastery.</li>
+          <li>Verification and follow-up practice are often optional and delayed.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>Use Pragati and Sherya as clear deadline examples, and Prashant as the counterexample of a disciplined learner. The key insight is that the same AI interface can serve learning or completion, while the burden of choosing the mode remains with the student.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Behavioural pattern</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Findings">
+  <div class="eyebrow">Cross-interview synthesis · 12 interviews</div>
+  <h2>Five recurring learning risks</h2>
+  <div class="content">
+    <div class="grid3" style="grid-template-columns:repeat(5,1fr);gap:14px">
+      <div class="card theme-card"><div class="number">1</div><h3 style="font-size:20px">False mastery</h3><p>Clear explanations can feel like understanding before the learner can reproduce the reasoning.</p></div>
+      <div class="card theme-card"><div class="number">2</div><h3 style="font-size:20px">Reduced struggle</h3><p>Instant help can arrive before enough independent effort has occurred.</p></div>
+      <div class="card theme-card"><div class="number">3</div><h3 style="font-size:20px">Deadline shift</h3><p>Under pressure, learning goals can become completion goals.</p></div>
+      <div class="card theme-card"><div class="number">4</div><h3 style="font-size:20px">Trust burden</h3><p>Fluent answers can be wrong, yet checking everything adds friction.</p></div>
+      <div class="card theme-card"><div class="number">5</div><h3 style="font-size:20px">Weak transfer</h3><p>Students may understand a familiar example but struggle with changed wording or mixed concepts.</p></div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~35 sec</h4><p>These are the recurring themes we carried forward from the team’s 12-interview Empathize phase. In the detailed material available here, Sushama’s Canvas 2 adds transfer to differently worded or mixed-concept questions, explanation-depth mismatch and difficulty locating relevant course concepts. Pawan’s interviews add direct evidence of manual verification, prompt-dependent teaching depth and confidence fading over time.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Empathize findings</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Root causes">
+  <div class="eyebrow">Analyze phase · Multi-Why synthesis</div>
+  <h2>We moved from symptoms to causes we can design for</h2>
+  <div class="content" style="align-items:flex-start">
+    <div style="width:100%">
+      <div class="root-flow"><div class="symptom"><strong>“The explanation makes sense.”</strong><br>But independent solving is uncertain.</div><div class="arrow">→</div><div class="root">AI-assisted completion and independent mastery are not clearly distinguished.</div></div>
+      <div class="root-flow"><div class="symptom"><strong>Students ask AI early.</strong><br>Persistence is hard to judge.</div><div class="arrow">→</div><div class="root">Immediate complete assistance can interrupt productive struggle before enough reasoning occurs.</div></div>
+      <div class="root-flow"><div class="symptom"><strong>Deadline = answer seeking.</strong><br>Finished artifact may outrun understanding.</div><div class="arrow">→</div><div class="root">Learning and productivity compete under time pressure, while AI supports both through the same interaction.</div></div>
+      <div class="root-flow"><div class="symptom"><strong>Verification is manual.</strong><br>Students compare AI with notes, books and other tools.</div><div class="arrow">→</div><div class="root">Trusted course sources and AI explanations are disconnected; reliability has to be rebuilt by hand.</div></div>
+      <div class="root-flow"><div class="symptom"><strong>Understanding fades.</strong><br>The session ends when the problem is solved.</div><div class="arrow">→</div><div class="root">There is little follow-up to measure transfer or retention after AI assistance.</div></div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~45 sec</h4><p>Explain that the Multi-Why work across the three Canvas 2 submissions converged. My own analysis focused on false mastery, productive struggle, deadline-driven completion and unverified trust. Sushama’s work adds unfamiliar-question transfer, explanation depth and course-material navigation. Pawan’s adds source verification and later retention. These root causes are more actionable than simply saying “students depend on AI.”</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Analyze · Multi-Why</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Conflicts">
+  <div class="eyebrow">Analyze phase · Conflicts of interest</div>
+  <h2>The problem is a set of trade-offs, not a single failure</h2>
+  <div class="content">
+    <div class="grid4">
+      <div class="conflict"><h3 style="font-size:18px">Support vs mastery</h3><div class="two"><div class="side">Fast, clear help</div><div class="vs">↔</div><div class="side">Independent reasoning</div></div><div class="result">Desired: progress without replacing reasoning.</div></div>
+      <div class="conflict"><h3 style="font-size:18px">Convenience vs struggle</h3><div class="two"><div class="side">Immediate help</div><div class="vs">↔</div><div class="side">Persistence</div></div><div class="result">Desired: help at the right moment.</div></div>
+      <div class="conflict"><h3 style="font-size:18px">Productivity vs learning</h3><div class="two"><div class="side">Meet deadlines</div><div class="vs">↔</div><div class="side">Deep learning</div></div><div class="result">Desired: efficiency with visible understanding.</div></div>
+      <div class="conflict"><h3 style="font-size:18px">Speed vs verification</h3><div class="two"><div class="side">Trust fluent answer</div><div class="vs">↔</div><div class="side">Cross-check</div></div><div class="result">Desired: trustworthy answers that are quick to verify.</div></div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>These conflicts are important because neither side is simply wrong. A student genuinely needs speed under deadlines. Full verification can be costly. Productive struggle can become unproductive frustration. Our solution must preserve the positive side of both values.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Analyze · Conflicts</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="HMWs">
+  <div class="eyebrow">End of Analyze phase</div>
+  <h2>Our “How Might We” directions</h2>
+  <div class="content" style="align-items:flex-start">
+    <div class="grid2" style="gap:16px">
+      <div class="hmw"><div class="icon">✓</div><p><strong>Mastery:</strong> How might we help students distinguish between following an AI explanation and applying the concept independently?</p></div>
+      <div class="hmw"><div class="icon" style="background:#DDF3E3">⏱</div><p><strong>Timing:</strong> How might we provide AI assistance at the right moment and level without removing productive struggle?</p></div>
+      <div class="hmw"><div class="icon" style="background:#FFF0B8">↔</div><p><strong>Transfer:</strong> How might we help students apply familiar concepts to unfamiliar or differently worded problems?</p></div>
+      <div class="hmw"><div class="icon" style="background:#F7DDE4">⌕</div><p><strong>Trust:</strong> How might we let students check an AI explanation against their own course material quickly, in one place?</p></div>
+      <div class="hmw"><div class="icon" style="background:#E5E7FA">↻</div><p><strong>Retention:</strong> How might we help students know, days later, whether they can still solve a similar problem on their own?</p></div>
+      <div class="hmw"><div class="icon" style="background:#E8F4F8">≋</div><p><strong>Depth:</strong> How might we make AI explanations understandable at the learner’s current knowledge level without overwhelming them?</p></div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~45 sec</h4><p>Present these as design directions, not features. Three came directly from my Canvas 2; the others are strengthened by Sushama’s analysis and Pawan’s three interviews with Sherya, Prashant and Abhay. The common thread is that the learner needs the right amount of support, evidence of independent ability, and lower-friction ways to verify and retain learning.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>HMW synthesis</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Solve process">
+  <div class="eyebrow">Next phase · Solve</div>
+  <h2>We will diverge before we converge</h2>
+  <div class="content">
+    <div class="timeline">
+      <div class="step"><div class="circle">1</div><h3>Silent ideation</h3><p>Each member generates several solutions independently from the HMWs.</p></div>
+      <div class="step"><div class="circle">2</div><h3>Group brainstorm</h3><p>Share, combine and deliberately create alternatives rather than defend one idea.</p></div>
+      <div class="step"><div class="circle">3</div><h3>Cluster</h3><p>Group ideas by learning mechanism: timing, verification, transfer, retention and adaptation.</p></div>
+      <div class="step"><div class="circle">4</div><h3>Select</h3><p>Evaluate desirability, feasibility and fit with interview evidence.</p></div>
+      <div class="step"><div class="circle">5</div><h3>Wireframe</h3><p>Turn the strongest concept into a Figma flow and a modified customer journey.</p></div>
+      <div class="step"><div class="circle">6</div><h3>Test</h3><p>Use representative learning tasks to see whether the design changes behaviour.</p></div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~35 sec</h4><p>Stress that we have not committed to a final app. After RD1 feedback, we will brainstorm, cluster and select. The solve phase should be driven by the HMWs and the conflicts, not by jumping directly to a favourite feature.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Solve phase plan</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Directions">
+  <div class="eyebrow">Possible prototype directions — hypotheses, not commitments</div>
+  <h2>What might be worth exploring?</h2>
+  <div class="content">
+    <div class="grid2">
+      <div class="card">
+        <div class="prototype"><span class="tag">Guidance</span><p><strong>Hint ladder / attempt-first flow</strong> — reveal only the next useful step before the full solution.</p></div>
+        <div class="prototype"><span class="tag">Mastery</span><p><strong>Try-it-solo check</strong> — a similar problem after assistance, with AI temporarily withheld.</p></div>
+        <div class="prototype"><span class="tag">Transfer</span><p><strong>Variation generator</strong> — change wording, context or concept combinations rather than repeat the same pattern.</p></div>
+      </div>
+      <div class="card">
+        <div class="prototype"><span class="tag">Trust</span><p><strong>Course-aware verification</strong> — link explanations back to notes, slides or trusted references.</p></div>
+        <div class="prototype"><span class="tag">Depth</span><p><strong>Adaptive explanation depth</strong> — begin simple, then expand only when the learner needs more detail.</p></div>
+        <div class="prototype"><span class="tag">Retention</span><p><strong>Delayed check-back</strong> — revisit concepts later with a short unassisted recall or transfer task.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~35 sec</h4><p>Make it explicit that these are hypotheses emerging from the Analyze work, not the final solution. Pawan’s Canvas 2 independently suggests teach-first mode, hint ladder, solo checks, source links and delayed recall. That convergence makes these good candidates to prototype, but RD1 feedback should still challenge them.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Early solution hypotheses</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide" data-title="Success">
+  <div class="eyebrow">What would success look like?</div>
+  <h2>We should test learning behaviour, not just app satisfaction</h2>
+  <div class="content">
+    <div class="grid4">
+      <div class="metric"><div class="big">Attempt</div><p>Does the student make a meaningful independent attempt before requesting a full solution?</p></div>
+      <div class="metric"><div class="big">Transfer</div><p>Can they solve a differently worded or mixed-concept problem after AI help?</p></div>
+      <div class="metric"><div class="big">Verify</div><p>Can they detect uncertainty or check an answer without leaving the learning flow?</p></div>
+      <div class="metric"><div class="big">Retain</div><p>Can they still explain or solve the concept after a delay?</p></div>
+    </div>
+  </div>
+  <div class="notes-panel"><h4>~20 sec</h4><p>This is our guardrail against designing another AI interface that merely feels helpful. The eventual prototype should produce observable evidence: more independent attempts, better transfer, easier verification and retained understanding.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Design-test criteria</span></div><div class="progress"><span></span></div>
+</section>
+
+<section class="slide title-slide" data-title="Dissent">
+  <div class="eyebrow">What we need from the dissenting team</div>
+  <h1 style="font-size:58px">Please challenge our assumptions.</h1>
+  <div class="accent-line"></div>
+  <div style="max-width:900px;margin:0 auto;text-align:left">
+    <div class="ask">In particular, tell us:</div>
+    <ul class="ask-list">
+      <li>Are these the right pain points, or have we confused symptoms with causes?</li>
+      <li>Which root cause is strongest — and which one is weakly supported?</li>
+      <li>Do our HMWs remain open enough for ideation, or do they already imply a solution?</li>
+      <li>Which trade-off are we underestimating?</li>
+    </ul>
+  </div>
+  <p class="presenter" style="margin-top:26px">Thank you.</p>
+  <div class="notes-panel"><h4>~20 sec</h4><p>End by inviting criticism rather than defending the concept. This matches the purpose of Ritual Dissent. Then stop and listen.</p></div>
+  <div class="footer"><span class="brand">TEAM 16</span><span>Ritual Dissent</span></div><div class="progress"><span></span></div>
+</section>
+
+</div>
+<div class="counter" id="counter">1 / 12</div>
+<div class="controls"><button id="prev" aria-label="Previous slide">‹</button><button id="notes" aria-label="Toggle notes">N</button><button id="next" aria-label="Next slide">›</button></div>
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const deck=document.querySelector('.deck');
+  let current=0;
+
+  function isPortraitMobile(){
+    return window.matchMedia('(max-width:700px) and (orientation:portrait)').matches;
+  }
+
+  function fitDeck(){
+    if(isPortraitMobile()){
+      deck.style.transform='none';
+      return;
+    }
+    const baseW=1280, baseH=720;
+    const margin=18;
+    const availableW=Math.max(240, window.innerWidth-margin*2);
+    const availableH=Math.max(160, window.innerHeight-margin*2);
+    const scale=Math.min(availableW/baseW, availableH/baseH);
+    deck.style.transform=`scale(${scale})`;
+  }
+
+  function show(i){
+    current=(i+slides.length)%slides.length;
+    slides.forEach((s,idx)=>{
+      s.classList.toggle('active',idx===current);
+      const bar=s.querySelector('.progress span');
+      if(bar)bar.style.width=((current+1)/slides.length*100)+'%';
+      const np=s.querySelector('.notes-panel');
+      if(np)np.classList.remove('show');
+      if(idx===current) s.scrollTop=0;
+    });
+    document.getElementById('counter').textContent=`${current+1} / ${slides.length}`;
+    document.title=`${current+1}/${slides.length} — ${slides[current].dataset.title} | Team 16`;
+  }
+
+  function next(){show(current+1)}
+  function prev(){show(current-1)}
+  function toggleNotes(){
+    const n=slides[current].querySelector('.notes-panel');
+    if(n)n.classList.toggle('show');
+  }
+
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+  document.getElementById('notes').onclick=toggleNotes;
+
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();next()}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='n')toggleNotes();
+    else if(e.key==='Home')show(0);
+    else if(e.key==='End')show(slides.length-1);
+  });
+
+  /* Horizontal swipe navigation; vertical gestures remain available for scrolling on phones. */
+  let touchX=0, touchY=0, touchTime=0;
+  document.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1)return;
+    touchX=e.touches[0].clientX;
+    touchY=e.touches[0].clientY;
+    touchTime=Date.now();
+  },{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(!e.changedTouches.length)return;
+    const dx=e.changedTouches[0].clientX-touchX;
+    const dy=e.changedTouches[0].clientY-touchY;
+    const dt=Date.now()-touchTime;
+    if(dt<700 && Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.25){
+      dx<0 ? next() : prev();
+    }
+  },{passive:true});
+
+  window.addEventListener('resize',fitDeck,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(fitDeck,80),{passive:true});
+
+  show(0);
+  fitDeck();
+</script>
+</body>
+</html>
